@@ -109,7 +109,8 @@ signal('tone').sin(432)
   .fx(sample => Math.tanh(sample * 3))   // Custom effect
   .fx((sample, t) => sample * Math.sin(t)) // Time-varying
   .play()                                 // Start playing (auto-starts by default)
-  .stop()                                  // Stop playing
+  .stop()                                 // Stop playing instantly
+  .stop(2)                                // Fade out over 2 seconds
 ```
 
 ### Play/Stop Control
@@ -125,8 +126,11 @@ const melody = signal('melody').sin(440).gain(0.2).stop()
 setTimeout(() => melody.play(), 4000)
 
 // Stop and restart
-bass.stop()   // Mute
+bass.stop()   // Instant stop
 bass.play()   // Unmute
+
+// Fade out smoothly (perfect for live performances)
+bass.stop(3)  // Fade out over 3 seconds
 
 // Imperative composition
 const layers = [

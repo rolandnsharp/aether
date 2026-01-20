@@ -19,6 +19,9 @@ class Signal {
   constructor(fn) {
     this.fn = fn;
     this.isActive = true;  // Auto-start by default
+    this.isFading = false;
+    this.fadeStartTime = 0;
+    this.fadeDuration = 0;
   }
 
   // Evaluate signal at time t
@@ -29,11 +32,21 @@ class Signal {
   // Play/stop signal
   play() {
     this.isActive = true;
+    this.isFading = false;
     return this;
   }
 
-  stop() {
-    this.isActive = false;
+  stop(fadeTime) {
+    if (fadeTime === undefined || fadeTime <= 0) {
+      // Instant stop
+      this.isActive = false;
+      this.isFading = false;
+    } else {
+      // Fade out over fadeTime seconds
+      this.isFading = true;
+      this.fadeStartTime = currentTime;
+      this.fadeDuration = fadeTime;
+    }
     return this;
   }
 
@@ -167,6 +180,9 @@ class StereoSignal {
     this.right = right;
     this.isStereo = true;
     this.isActive = true;  // Auto-start by default
+    this.isFading = false;
+    this.fadeStartTime = 0;
+    this.fadeDuration = 0;
   }
 
   eval(t) {
@@ -179,11 +195,21 @@ class StereoSignal {
   // Play/stop signal
   play() {
     this.isActive = true;
+    this.isFading = false;
     return this;
   }
 
-  stop() {
-    this.isActive = false;
+  stop(fadeTime) {
+    if (fadeTime === undefined || fadeTime <= 0) {
+      // Instant stop
+      this.isActive = false;
+      this.isFading = false;
+    } else {
+      // Fade out over fadeTime seconds
+      this.isFading = true;
+      this.fadeStartTime = currentTime;
+      this.fadeDuration = fadeTime;
+    }
     return this;
   }
 }
@@ -339,16 +365,30 @@ function fillBuffer(buffer, startTime) {
 
     for (const sig of activeSignals.values()) {
       // Skip if signal is stopped
-      if (!sig.isActive) continue;
+      if (!sig.isActive && !sig.isFading) continue;
+
+      // Calculate fade envelope if fading
+      let fadeGain = 1.0;
+      if (sig.isFading) {
+        const fadeElapsed = t - sig.fadeStartTime;
+        if (fadeElapsed >= sig.fadeDuration) {
+          // Fade complete - stop the signal
+          sig.isActive = false;
+          sig.isFading = false;
+          continue;
+        }
+        // Linear fade from 1 to 0
+        fadeGain = 1.0 - (fadeElapsed / sig.fadeDuration);
+      }
 
       if (sig.isStereo) {
         const stereo = sig.eval(t);
-        leftSample += stereo.left;
-        rightSample += stereo.right;
+        leftSample += stereo.left * fadeGain;
+        rightSample += stereo.right * fadeGain;
       } else {
         const mono = sig.eval(t);
-        leftSample += mono;
-        rightSample += mono;
+        leftSample += mono * fadeGain;
+        rightSample += mono * fadeGain;
       }
     }
 
