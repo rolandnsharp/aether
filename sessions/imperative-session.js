@@ -5,10 +5,7 @@
 // Run with: node signal/runner.js signal/imperative-session.js
 
 const signal = require('../src/index');
-const { step } = require('../src/rhythm');
-const { freq } = require('../src/melody');
-const { env } = require('../src/envelopes');
-const scales = require('../src/scales');
+const { step, freq, env, scales } = signal;
 
 // ============================================================================
 // EXAMPLE 1: Generate chord tones with a loop

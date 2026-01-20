@@ -5,10 +5,7 @@
 // Edit this file and save to hear changes in real-time!
 
 const signal = require('../src/index');
-const { step, euclidean } = require('../src/rhythm');
-const { freq } = require('../src/melody');
-const { env } = require('../src/envelopes');
-const scales = require('../src/scales');
+const { step, euclidean, freq, env, scales } = signal;
 
 // ============================================================================
 // SIMPLE EXAMPLES - Uncomment to try

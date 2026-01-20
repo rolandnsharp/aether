@@ -5,10 +5,10 @@ Minimal, composable audio synthesis for live coding.
 ## Quick Start
 
 ```javascript
-const signal = require('./src/index');
+const signal = require('signal');
 
 // Create a sine wave - audio starts automatically!
-signal('tone').sin(432).gain(0.2);
+signal('tone', t => Math.sin(2 * Math.PI * 432 * t) * 0.2);
 ```
 
 ## Installation
@@ -154,7 +154,8 @@ left.stereo(right)
 ### Rhythm
 
 ```javascript
-const { step, euclidean } = require('./src/rhythm')
+const signal = require('signal');
+const { step, euclidean } = signal;
 
 // Beat/phase info
 const { beat, index, phase } = step(t, 120, 16)  // 120 BPM, 16th notes
@@ -166,8 +167,8 @@ const pattern = euclidean(5, 16)  // 5 pulses in 16 steps
 ### Melody
 
 ```javascript
-const { freq, mtof, ftom } = require('./signal/melody')
-const scales = require('./src/scales')
+const signal = require('signal');
+const { freq, mtof, ftom, scales } = signal;
 
 // Scale degree to frequency
 freq(432, scales.major, 2)  // => 486 Hz (major third)
@@ -180,7 +181,8 @@ ftom(440) // => 69
 ### Scales
 
 ```javascript
-const scales = require('./src/scales')
+const signal = require('signal');
+const { scales } = signal;
 
 scales.major       // [0, 2, 4, 5, 7, 9, 11, 12]
 scales.minor       // [0, 2, 3, 5, 7, 8, 10, 12]
@@ -192,7 +194,8 @@ scales.blues       // [0, 3, 5, 6, 7, 10, 12]
 ### Envelopes
 
 ```javascript
-const { env } = require('./src/envelopes')
+const signal = require('signal');
+const { env } = signal;
 
 env.exp(phase, 5)                           // Exponential decay
 env.ramp(phase, 0, 1)                       // Linear ramp
@@ -206,8 +209,8 @@ Signal API works great with loops, arrays, and imperative logic:
 ### Generate Chord with Loop
 
 ```javascript
-const { freq } = require('./src/melody');
-const scales = require('./src/scales');
+const signal = require('signal');
+const { freq, scales } = signal;
 
 const chordDegrees = [0, 4, 7, 11];  // Major 7th
 
@@ -234,8 +237,8 @@ for (let i = 0; i < 8; i++) {
 ### Generate Drum Pattern with Nested Loops
 
 ```javascript
-const { step } = require('./src/rhythm');
-const { env } = require('./src/envelopes');
+const signal = require('signal');
+const { step, env } = signal;
 
 // Create multiple kick drums with different patterns
 const patterns = [
@@ -380,10 +383,8 @@ signal('bass').sin(110)
 ### Melodic Sequencer
 
 ```javascript
-const { step } = require('./src/rhythm')
-const { freq } = require('./src/melody')
-const { env } = require('./src/envelopes')
-const scales = require('./src/scales')
+const signal = require('signal');
+const { step, freq, env, scales } = signal;
 
 signal('melody', t => {
   const { index, phase } = step(t, 120, 8)  // 8th notes
@@ -400,8 +401,8 @@ signal('melody', t => {
 ### Euclidean Kick
 
 ```javascript
-const { step, euclidean } = require('./src/rhythm')
-const { env } = require('./src/envelopes')
+const signal = require('signal');
+const { step, euclidean, env } = signal;
 
 signal('kick', t => {
   const { index, phase } = step(t, 120, 16)

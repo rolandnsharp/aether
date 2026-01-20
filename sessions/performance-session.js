@@ -5,10 +5,7 @@
 // Run with: node signal/runner.js signal/performance-session.js
 
 const signal = require('../src/index');
-const { step } = require('../src/rhythm');
-const { freq } = require('../src/melody');
-const { env } = require('../src/envelopes');
-const scales = require('../src/scales');
+const { step, freq, env, scales } = signal;
 
 // ============================================================================
 // Create instrument layers that you can toggle on/off

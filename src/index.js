@@ -396,9 +396,29 @@ signal.list = function() {
 // EXPORTS
 // ============================================================================
 
+const rhythm = require('./rhythm');
+const melody = require('./melody');
+const envelopes = require('./envelopes');
+const scales = require('./scales');
+
 module.exports = signal;
 module.exports.Signal = Signal;
 module.exports.SignalBuilder = SignalBuilder;
 module.exports.StereoSignal = StereoSignal;
 module.exports.startAudio = startAudio;
 module.exports.stopAudio = stopAudio;
+
+// Export rhythm utilities
+module.exports.step = rhythm.step;
+module.exports.euclidean = rhythm.euclidean;
+
+// Export melody utilities
+module.exports.freq = melody.freq;
+module.exports.mtof = melody.mtof;
+module.exports.ftom = melody.ftom;
+
+// Export envelope utilities
+module.exports.env = envelopes.env;
+
+// Export scales
+module.exports.scales = scales;
