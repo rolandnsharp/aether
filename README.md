@@ -186,6 +186,32 @@ const { beat, index, phase } = step(t, 120, 16)  // 120 BPM, 16th notes
 const pattern = euclidean(5, 16)  // 5 pulses in 16 steps
 ```
 
+**Why `step` instead of a `tempo` helper?**
+
+Signal uses `step(t, bpm, subdivision)` instead of a separate tempo API because:
+
+1. **Explicit math**: You see exactly what's happening - `step` converts continuous time into discrete rhythmic components. No hidden state or scheduling.
+2. **Pure function**: `Time → {beat, index, phase}` - same input always gives same output
+3. **Composable**: You take the output and use it directly in your DSP math
+4. **Live coding friendly**: BPM is right there in your code - just change `step(t, 60, 8)` to `step(t, 120, 8)` and save
+
+A separate "tempo" API would require global state and hide the time→rhythm relationship. With `step`, you're writing the math yourself - Signal just reduces boilerplate.
+
+**Controlling tempo:**
+```javascript
+// Slow and spacious
+const { phase } = step(t, 40, 4);  // 40 BPM, quarter notes
+
+// Medium groove
+const { phase } = step(t, 90, 8);  // 90 BPM, eighth notes
+
+// Fast and urgent
+const { phase } = step(t, 140, 16);  // 140 BPM, sixteenth notes
+
+// Use phase to gate your signal
+return phiFractal(4, 110, 0.3, t) * env.exp(phase, 8);
+```
+
 ### Melody
 
 ```javascript
