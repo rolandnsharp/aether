@@ -205,6 +205,107 @@ signal('evolving').fn(t => {
 
 ---
 
+## JavaScript Patterns for Live Coding
+
+Signal leverages JavaScript itself for live coding - no special syntax needed. Here are patterns that make performances dynamic:
+
+### Array Indexing for Value Cycling
+
+```javascript
+// Cycle through frequencies every 5 seconds
+const freq = [440, 550, 660][Math.floor(Date.now() / 5000) % 3];
+signal('cycling').sin(freq).gain(0.2);
+```
+
+How it works:
+- `[440, 550, 660]` - array of values
+- `[Math.floor(Date.now() / 5000) % 3]` - index that cycles 0→1→2
+- `Date.now()` - milliseconds since 1970
+- `/ 5000` - divide into 5-second chunks
+- `% 3` - modulo gives 0, 1, or 2
+
+### Ternary Operators for Quick Switching
+
+```javascript
+// Switch between two sounds based on time
+const freq = Date.now() % 10000 < 5000 ? 440 : 220;
+signal('toggle').sin(freq).gain(0.2);
+
+// Conditional effects
+signal('dynamic').sin(330)
+  .fx(sample => Date.now() % 8000 < 4000
+    ? Math.tanh(sample * 3)  // Distorted
+    : sample)                 // Clean
+  .gain(0.2);
+```
+
+### Template Literals for Dynamic Names
+
+```javascript
+// Generate multiple variations
+const variations = 3;
+for (let i = 0; i < variations; i++) {
+  const detune = i * 5;  // Detune by 5 Hz each
+  signal(`layer-${i}`).sin(440 + detune).gain(0.1);
+}
+```
+
+### Live Value Exploration
+
+Instead of SuperCollider's Ctrl+Enter on individual lines, use comments:
+
+```javascript
+// Try different values by uncommenting:
+const freq = 440;
+// const freq = 550;
+// const freq = 660;
+
+signal('tone').sin(freq).gain(0.2);
+
+// Or use an array and change the index:
+const freqs = [440, 550, 660, 880];
+signal('tone').sin(freqs[0]).gain(0.2);  // Change 0 to 1, 2, 3...
+```
+
+### Time-Based Patterns Without Hot Reload
+
+```javascript
+// Pattern evolves automatically based on clock time
+signal('evolving', t => {
+  const second = Math.floor(Date.now() / 1000);
+  const freq = [200, 300, 400, 500][second % 4];
+  return Math.sin(2 * Math.PI * freq * t) * 0.2;
+});
+
+// Different sound every 10 seconds
+const waveforms = [
+  t => Math.sin(2 * Math.PI * 440 * t),      // Sine
+  t => Math.sign(Math.sin(2 * Math.PI * 440 * t)),  // Square
+  t => (440 * t % 1) * 2 - 1                 // Saw
+];
+const wave = waveforms[Math.floor(Date.now() / 10000) % 3];
+signal('morphing', wave).gain(0.2);
+```
+
+### Combining Patterns
+
+```javascript
+// Everything you know about JavaScript just works:
+const scales = [
+  [0, 2, 4, 5, 7, 9, 11],  // Major
+  [0, 2, 3, 5, 7, 8, 10],  // Minor
+  [0, 2, 4, 7, 9]          // Pentatonic
+];
+
+const scaleIndex = Math.floor(Date.now() / 8000) % scales.length;
+const scale = scales[scaleIndex];
+const degree = scale[Math.floor(Date.now() / 1000) % scale.length];
+
+signal('smart').sin(440 * Math.pow(2, degree / 12)).gain(0.2);
+```
+
+---
+
 ## Live Performance
 
 ```javascript

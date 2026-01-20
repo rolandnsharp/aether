@@ -385,6 +385,63 @@ signal('kick', t => {
 
 See `imperative-session.js` for more examples.
 
+## JavaScript Patterns for Live Coding
+
+Signal leverages JavaScript itself for live coding - no special syntax needed.
+
+### Array Indexing for Value Cycling
+
+```javascript
+// Cycle through frequencies every 5 seconds
+const freq = [440, 550, 660][Math.floor(Date.now() / 5000) % 3];
+signal('cycling').sin(freq).gain(0.2);
+```
+
+How it works:
+- `[440, 550, 660]` - array of values
+- `[Math.floor(Date.now() / 5000) % 3]` - index that cycles 0→1→2
+- `Date.now()` returns milliseconds since 1970
+- Divide by 5000 to get 5-second chunks
+- Modulo 3 gives repeating sequence: 0, 1, 2, 0, 1, 2...
+
+### Live Value Exploration
+
+Instead of SuperCollider's Ctrl+Enter on individual lines, use comments:
+
+```javascript
+// Try different values by uncommenting:
+const freq = 440;
+// const freq = 550;
+// const freq = 660;
+
+signal('tone').sin(freq).gain(0.2);
+
+// Or use an array and change the index:
+const freqs = [440, 550, 660, 880];
+signal('tone').sin(freqs[0]).gain(0.2);  // Change 0 to 1, 2, 3...
+```
+
+### Ternary Operators for Quick Switching
+
+```javascript
+// Toggle between two frequencies every 5 seconds
+const freq = Date.now() % 10000 < 5000 ? 440 : 220;
+signal('toggle').sin(freq).gain(0.2);
+```
+
+### Time-Based Patterns
+
+```javascript
+// Pattern evolves automatically based on clock time
+signal('evolving', t => {
+  const second = Math.floor(Date.now() / 1000);
+  const freq = [200, 300, 400, 500][second % 4];
+  return Math.sin(2 * Math.PI * freq * t) * 0.2;
+});
+```
+
+See `EXAMPLES.md` for more JavaScript live coding patterns.
+
 ## Examples
 
 ### Tremolo
