@@ -2,6 +2,8 @@
 
 Minimal, composable audio synthesis for live coding.
 
+**⚡ Powered by Bun** - Signal requires [Bun](https://bun.sh) for proper tail call optimization, enabling elegant recursive synthesis techniques like fractal music generation.
+
 ## What Makes Signal Different?
 
 Most JavaScript live coding libraries (like Tidal Cycles, Gibber, Strudel) and tools like Sonic Pi act as frontends that send commands to SuperCollider or other synthesis engines. You're essentially scripting a synthesizer, not programming sound itself.
@@ -31,17 +33,34 @@ signal('tone', t => Math.sin(2 * Math.PI * 432 * t) * 0.2);
 
 ## Installation
 
+First, install Bun:
 ```bash
-npm install -g @rolandnsharp/signal
+curl -fsSL https://bun.sh/install | bash
+```
+
+Then install Signal:
+```bash
+bun install -g @rolandnsharp/signal
 ```
 
 ## Live Coding
 
 ```bash
-signal sessions/example-session.js
+bun signal sessions/example-session.js
 ```
 
 Edit `example-session.js` and save - changes apply immediately!
+
+### Why Bun?
+
+Signal leverages Bun's **proper tail call optimization** (TCO) to enable elegant recursive patterns that would cause stack overflows in Node.js. This allows:
+
+- Pure functional Y-combinator recursion for generative music
+- Deep Mandelbrot set exploration for infinite fractal journeys
+- Recursive melodic and harmonic structures without iteration
+- True lambda calculus elegance in your audio synthesis
+
+Bun is also faster, has better dev tools, and is production-ready in 2026.
 
 ## Core API
 
@@ -169,7 +188,53 @@ signal.stereo(left, right)
 
 // Chainable
 left.stereo(right)
+
+// Binaural beats (different frequency in each channel)
+signal('binaural').sin(444).stereo(signal.sin(448))
+  .fx(sample => Math.tanh(sample * 2))
+  .gain(0.3);
 ```
+
+Stereo signals support all chainable methods (gain, fx, clip, fold, delay, feedback, mix).
+
+## Functional Programming with Y-Combinator
+
+Signal exports the Y-combinator and functional utilities for elegant recursive synthesis:
+
+```javascript
+const signal = require('@rolandnsharp/signal');
+const { Y, pipe, compose, curry } = signal;
+
+// Recursive Fibonacci with Y-combinator (anonymous recursion!)
+const fibonacci = Y(recurse => (n, a = 0, b = 1) => {
+  if (n === 0) return a;
+  if (n === 1) return b;
+  return recurse(n - 1, b, a + b);
+});
+
+// Mandelbrot set with Y-combinator
+const mandelbrot = (cx, cy, maxDepth) =>
+  Y(recurse => (zx, zy, depth) => {
+    if (depth >= maxDepth) return depth;
+    if (zx * zx + zy * zy > 4) return depth;
+
+    const zx2 = zx * zx - zy * zy;
+    const zy2 = 2 * zx * zy;
+
+    return recurse(zx2 + cx, zy2 + cy, depth + 1);
+  })(0, 0, 0);
+
+// Use in music generation
+signal('fractal', t => {
+  const escape = mandelbrot(-0.5 + Math.cos(t * 0.1) * 0.3, 0, 50);
+  const degree = escape % 7;
+  const f = signal.freq(220, signal.scales.minor, degree);
+
+  return Math.sin(2 * Math.PI * f * t) * 0.2;
+});
+```
+
+**Note**: Deep recursion requires Bun's tail call optimization. See `sessions/fractal-y-combinator-session.js` for more examples.
 
 ## Helper Utilities
 

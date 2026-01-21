@@ -1,10 +1,12 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 // ============================================================================
 // SIGNAL LIVE CODING RUNNER
 // ============================================================================
 // Watches a session file and hot-reloads it on changes
-// Usage: signal <session-file.js>
+// Usage: bun signal <session-file.js>
+//
+// Requires Bun for proper tail call optimization (TCO)
 
 const fs = require('fs');
 const path = require('path');

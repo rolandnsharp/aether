@@ -1,7 +1,7 @@
 {
   "name": "@rolandnsharp/signal",
   "version": "1.0.4",
-  "description": "Minimal, composable audio synthesis for live coding.",
+  "description": "Minimal, composable audio synthesis for live coding. Powered by Bun for proper tail call optimization.",
   "homepage": "https://github.com/rolandnsharp/signal#readme",
   "bugs": {
     "url": "https://github.com/rolandnsharp/signal/issues"
@@ -17,10 +17,14 @@
   "bin": {
     "signal": "src/runner.js"
   },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "ramda": "^0.32.0",
     "speaker": "^0.5.5"
   }
 }

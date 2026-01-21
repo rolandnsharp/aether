@@ -250,6 +250,148 @@ class StereoSignal {
     }
     return this;
   }
+
+  // ============================================================================
+  // CHAINABLE METHODS (apply to both channels)
+  // ============================================================================
+
+  gain(amount) {
+    return new StereoSignal(
+      new Signal(t => this.left.fn(t) * amount),
+      new Signal(t => this.right.fn(t) * amount)
+    );
+  }
+
+  offset(amount) {
+    return new StereoSignal(
+      new Signal(t => this.left.fn(t) + amount),
+      new Signal(t => this.right.fn(t) + amount)
+    );
+  }
+
+  clip(threshold) {
+    return new StereoSignal(
+      new Signal(t => {
+        const sample = this.left.fn(t);
+        return Math.max(-threshold, Math.min(threshold, sample));
+      }),
+      new Signal(t => {
+        const sample = this.right.fn(t);
+        return Math.max(-threshold, Math.min(threshold, sample));
+      })
+    );
+  }
+
+  fold(threshold) {
+    return new StereoSignal(
+      new Signal(t => {
+        let sample = this.left.fn(t);
+        while (sample > threshold) sample = 2 * threshold - sample;
+        while (sample < -threshold) sample = -2 * threshold - sample;
+        return sample;
+      }),
+      new Signal(t => {
+        let sample = this.right.fn(t);
+        while (sample > threshold) sample = 2 * threshold - sample;
+        while (sample < -threshold) sample = -2 * threshold - sample;
+        return sample;
+      })
+    );
+  }
+
+  fx(effectFn) {
+    return new StereoSignal(
+      new Signal(t => {
+        const sample = this.left.fn(t);
+        return effectFn.length === 1 ? effectFn(sample) : effectFn(sample, t);
+      }),
+      new Signal(t => {
+        const sample = this.right.fn(t);
+        return effectFn.length === 1 ? effectFn(sample) : effectFn(sample, t);
+      })
+    );
+  }
+
+  mix(...signals) {
+    return new StereoSignal(
+      new Signal(t => {
+        let sum = this.left.fn(t);
+        for (const sig of signals) {
+          if (sig.isStereo) {
+            sum += sig.left.fn(t);
+          } else {
+            sum += sig.fn(t);
+          }
+        }
+        return sum;
+      }),
+      new Signal(t => {
+        let sum = this.right.fn(t);
+        for (const sig of signals) {
+          if (sig.isStereo) {
+            sum += sig.right.fn(t);
+          } else {
+            sum += sig.fn(t);
+          }
+        }
+        return sum;
+      })
+    );
+  }
+
+  delay(delayTime) {
+    return new StereoSignal(
+      new Signal(t => {
+        if (t < delayTime) return 0;
+        return this.left.fn(t - delayTime);
+      }),
+      new Signal(t => {
+        if (t < delayTime) return 0;
+        return this.right.fn(t - delayTime);
+      })
+    );
+  }
+
+  feedback(delayTime, feedbackAmount) {
+    const leftCache = new Map();
+    const rightCache = new Map();
+
+    const leftOutput = t => {
+      const key = Math.round(t * SAMPLE_RATE);
+      if (leftCache.has(key)) return leftCache.get(key);
+
+      if (t < delayTime) {
+        const result = this.left.fn(t);
+        leftCache.set(key, result);
+        return result;
+      }
+
+      const dry = this.left.fn(t);
+      const wet = leftOutput(t - delayTime) * feedbackAmount;
+      const result = dry + wet;
+      leftCache.set(key, result);
+      return result;
+    };
+
+    const rightOutput = t => {
+      const key = Math.round(t * SAMPLE_RATE);
+      if (rightCache.has(key)) return rightCache.get(key);
+
+      if (t < delayTime) {
+        const result = this.right.fn(t);
+        rightCache.set(key, result);
+        return result;
+      }
+
+      const dry = this.right.fn(t);
+      const wet = rightOutput(t - delayTime) * feedbackAmount;
+      const result = dry + wet;
+      rightCache.set(key, result);
+      return result;
+    };
+
+    return new StereoSignal(new Signal(leftOutput), new Signal(rightOutput));
+  }
 }
 
 // ============================================================================
@@ -478,6 +620,7 @@ const rhythm = require('./rhythm');
 const melody = require('./melody');
 const envelopes = require('./envelopes');
 const scales = require('./scales');
+const functional = require('./functional');
 
 module.exports = signal;
 module.exports.Signal = Signal;
@@ -500,3 +643,10 @@ module.exports.env = envelopes.env;
 
 // Export scales
 module.exports.scales = scales;
+
+// Export functional utilities (Y-combinator, pipe, compose, etc.)
+module.exports.Y = functional.Y;
+module.exports.pipe = functional.pipe;
+module.exports.compose = functional.compose;
+module.exports.curry = functional.curry;
+module.exports.fp = functional;  // Export all functional utilities
