@@ -11,48 +11,60 @@ const { step, freq, env, scales } = signal;
 // Create instrument layers that you can toggle on/off
 // ============================================================================
 
+// signal('test').saw(432)
+
+
+// const bass = signal('bass').fn(t => {
+//   const { index, phase } = step(t, 228, 2);
+//   const pattern = [0, 0, 7, 5];
+//   const degree = pattern[index % pattern.length];
+//   const f = freq(220, scales.minor, degree);
+//   return signal.sin(f).eval(t) * env.exp(phase, 3) * 0.3;
+// });
+
+
 // Layer 1: Bass
-const bass = signal('bass').fn(t => {
-  const { index, phase } = step(t, 128, 2);
-  const pattern = [0, 0, 7, 5];
-  const degree = pattern[index % pattern.length];
-  const f = freq(110, scales.minor, degree);
-  return signal.sin(f).eval(t) * env.exp(phase, 3) * 0.3;
-});
+// const bass = signal('bass').fn(t => {
+//   const { index, phase } = step(t, 128, 2);
+//   const pattern = [0, 0, 7, 5];
+//   const degree = pattern[index % pattern.length];
+//   const f = freq(110, scales.minor, degree);
+//   return signal.sin(f).eval(t) * env.exp(phase, 3) * 0.3;
+// });
 
-// Layer 2: Arpeggio
-const arp = signal('arp').fn(t => {
-  const { index, phase } = step(t, 128, 16);
-  const pattern = [0, 3, 7, 10, 7, 3];
-  const degree = pattern[index % pattern.length];
-  const f = freq(440, scales.minor, degree);
-  return signal.sin(f).eval(t) * env.exp(phase, 8) * 0.15;
-}).stop();  // Start muted
+// // Layer 2: Arpeggio
+// const arp = signal('arp').fn(t => {
+//   const { index, phase } = step(t, 128, 16);
+//   const pattern = [0, 3, 7, 10, 7, 3];
+//   const degree = pattern[index % pattern.length];
+//   const f = freq(440, scales.minor, degree);
+//   return signal.sin(f).eval(t) * env.exp(phase, 8) * 0.15;
+// }).stop();  // Start muted
 
-// Layer 3: Pad
-const pad = signal('pad').fn(t => {
-  return signal.mix(
-    signal.sin(freq(330, scales.minor, 0)),
-    signal.sin(freq(330, scales.minor, 3)),
-    signal.sin(freq(330, scales.minor, 7))
-  ).eval(t) * 0.1;
-}).stop();  // Start muted
+// // Layer 3: Pad
+// const pad = signal('pad').fn(t => {
+//   return signal.mix(
+//     signal.sin(freq(330, scales.minor, 0)),
+//     signal.sin(freq(330, scales.minor, 3)),
+//     signal.sin(freq(330, scales.minor, 7))
+//   ).eval(t) * 0.1;
+// }).stop();  // Start muted
 
-// Layer 4: Kick
-const kick = signal('kick').fn(t => {
-  const { beat, phase } = step(t, 128, 4);
-  if (beat % 4 !== 0 || phase > 0.25) return 0;
-  const f = 50 + 80 * env.exp(phase, 20);
-  return signal.sin(f).eval(t) * env.exp(phase, 10) * 0.35;
-});
+// // Layer 4: Kick
+// const kick = signal('kick').fn(t => {
+//   const { beat, phase } = step(t, 128, 4);
+//   if (beat % 4 !== 0 || phase > 0.25) return 0;
+//   const f = 50 + 80 * env.exp(phase, 20);
+//   return signal.sin(f).eval(t) * env.exp(phase, 10) * 0.35;
+// });
 
-// Layer 5: Hi-hat
-const hihat = signal('hihat').fn(t => {
-  const { index, phase } = step(t, 128, 16);
-  if (phase > 0.05) return 0;
-  const amplitude = index % 4 === 0 ? 0.2 : 0.1;  // Accent on downbeats
-  return signal.noise().eval(t) * env.exp(phase, 15) * amplitude;
-}).stop();  // Start muted
+// // Layer 5: Hi-hat
+// const hihat = signal('hihat').fn(t => {
+//   const { index, phase } = step(t, 128, 16);
+//   if (phase > 0.05) return 0;
+//   const amplitude = index % 4 === 0 ? 0.2 : 0.1;  // Accent on downbeats
+//   return signal.noise().eval(t) * env.exp(phase, 15) * amplitude;
+// }).stop();  // Start muted
 
 // ============================================================================
 // Performance Controls
