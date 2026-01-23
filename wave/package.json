@@ -1,0 +1,24 @@
+{
+  "name": "@rolandnsharp/wave",
+  "version": "0.2.0",
+  "description": "Pure functional audio synthesis with JACK via Bun FFI",
+  "type": "module",
+  "main": "index.js",
+  "bin": {
+    "wave": "runner.js"
+  },
+  "keywords": [
+    "audio",
+    "synthesis",
+    "dsp",
+    "functional",
+    "live-coding",
+    "jack",
+    "bun"
+  ],
+  "author": "Roland Sharp",
+  "license": "ISC",
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}
