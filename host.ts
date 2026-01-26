@@ -7,10 +7,6 @@ let browserSocket = null;
 
 console.log('Starting headless audio host...');
 
-// Read the initial code that will be sent on connection
-const initialCode = await Bun.file('signal.js').text();
-console.log('[Host] Loaded initial code from signal.js');
-
 // 1. Launch Playwright
 const browser = await chromium.launch({
   headless: false, // Browser window needed for audio output
@@ -84,7 +80,8 @@ const server = Bun.serve({
                 const parsed = JSON.parse(message);
                 if (parsed.type === 'ready') {
                     console.log('[Host] Browser engine ready. Sending initial code.');
-                    browserSocket.send(initialCode);
+                    const code = await Bun.file('signal.js').text();
+                    browserSocket.send(JSON.stringify({ type: 'eval', code }));
 
                     // 4. File Watcher for automatic reloading
                     // Only start watching for changes after the browser is connected AND ready.
@@ -93,7 +90,7 @@ const server = Bun.serve({
                         console.log('[Host] signal.js changed, reloading...');
                         if (browserSocket) {
                           const code = await Bun.file('signal.js').text();
-                          browserSocket.send(code);
+                          browserSocket.send(JSON.stringify({ type: 'eval', code }));
                         }
                       }
                     });

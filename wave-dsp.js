@@ -1,35 +1,46 @@
 // wave-dsp.js
 // A functional DSP library wrapping genish.js
-// These helpers return genish expression strings for use with wave()
+// These helpers work with genish graph objects
 
-// Basic oscillators
-const sin = (freq) => `genish.cycle(${freq})`;
-const saw = (freq) => `genish.phasor(${freq})`;
-const square = (freq) => `genish.lte(genish.phasor(${freq}), 0.5)`;
-const noise = () => `genish.noise()`;
+// Note: In the worklet, genish is available as globalThis.genish
+// In the browser, it's window.genish
 
-// Effects
-const gain = (amount) => (input) => `genish.mul(${input}, ${amount})`;
-const add = (a) => (input) => `genish.add(${input}, ${a})`;
-const mul = (a) => (input) => `genish.mul(${input}, ${a})`;
+// Basic oscillators - work with genish objects
+const cycle = (freq) => genish.cycle(freq);
+const phasor = (freq) => genish.phasor(freq);
+const noise = () => genish.noise();
 
-// Utilities
-const pipe = (...fns) => (initialValue) => {
-  return fns.reduce((acc, fn) => fn(acc), initialValue);
+// Math helpers
+const add = (...args) => {
+  if (args.length === 0) return 0;
+  if (args.length === 1) return args[0];
+  return args.reduce((a, b) => genish.add(a, b));
 };
 
-// Composable examples
-const bass = (freq) => pipe(sin(freq), gain(0.5));
-const kick = () => pipe(sin(60), mul(0.8));
+const mul = (...args) => {
+  if (args.length === 0) return 1;
+  if (args.length === 1) return args[0];
+  return args.reduce((a, b) => genish.mul(a, b));
+};
 
-// Make functions available globally in the browser context
-window.sin = sin;
-window.saw = saw;
-window.square = square;
-window.noise = noise;
-window.gain = gain;
-window.add = add;
-window.mul = mul;
-window.pipe = pipe;
-window.bass = bass;
-window.kick = kick;
+// Composable examples - these take a time parameter
+const bass = (t, freq) => mul(genish.sin(mul(2 * Math.PI * freq, t)), 0.4);
+
+const wobble = (t, freq, rate) => {
+  const mod = mul(genish.cycle(rate), 20);
+  const modFreq = add(freq, mod);
+  return mul(genish.sin(mul(2 * Math.PI, modFreq, t)), 0.3);
+};
+
+// Make functions available globally
+// In worklet context, attach to globalThis
+// In browser context, attach to window
+const globalScope = typeof window !== 'undefined' ? window : globalThis;
+
+globalScope.cycle = cycle;
+globalScope.phasor = phasor;
+globalScope.noise = noise;
+globalScope.add = add;
+globalScope.mul = mul;
+globalScope.bass = bass;
+globalScope.wobble = wobble;

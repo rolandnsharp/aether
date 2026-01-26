@@ -104,16 +104,20 @@
 
     socket.onmessage = (event) => {
       console.log(`[Engine] AudioContext state on message: ${audioContext.state}`);
-      const code = event.data;
-      console.log('[Engine] Received code from host.');
+
       try {
-        // The magic: execute the user's code string by injecting it as a script
-        const script = document.createElement('script');
-        script.textContent = code;
-        document.body.appendChild(script);
-        document.body.removeChild(script);
+        const message = JSON.parse(event.data);
+
+        if (message.type === 'eval') {
+          console.log('[Engine] Forwarding signal.js to worklet for evaluation');
+          // Forward the code to the worklet for evaluation
+          genishNode.port.postMessage({
+            type: 'eval',
+            code: message.code
+          });
+        }
       } catch (e) {
-        console.error('[Engine] Error executing code:', e);
+        console.error('[Engine] Error handling message:', e);
       }
     };
 
