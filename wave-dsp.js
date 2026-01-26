@@ -73,7 +73,9 @@ const signal = (t, userFunc) => {
 // Phase survives hot-swaps → no clicks when you change code mid-performance
 const livePhasor = (freq, idx = 0) => {
   const lastPhase = g.peek(g.gen.memory, idx);  // Read last phase from memory
-  const dt = g.div(freq, g.gen.samplerate);  // Phase increment (supports 44.1k/48k)
+  // Pre-calculate phase increment in JavaScript (freq is already a number)
+  // TODO: Make sample rate configurable (currently hardcoded to 44100)
+  const dt = freq / 44100;  // Phase increment per sample
   const nextPhase = g.mod(g.add(lastPhase, dt), 1);  // Wrap 0-1
   // Use sub(..., 0) to force poke into the graph without changing the value
   return g.sub(g.poke(g.gen.memory, nextPhase, idx), 0);
