@@ -3,10 +3,10 @@
 // All waves use the time parameter 't' provided by genish.accum()
 
 // Example 1: Simple sine tone using genish directly (ultra simple test)
-wave('tone', t => genish.mul(genish.cycle(440), 0.3));
+// wave('tone', t => genish.mul(genish.cycle(330), 0.3));
 
-// Example 2: Bass note using helper function
-// wave('bass', t => bass(t, 110));
+// Example 2: Bass using cycle() - stable and optimized
+wave('bass', t => bass(220));
 
 // Example 3: Wobble bass with frequency modulation
 // wave('wobble', t => wobble(t, 110, 0.5));

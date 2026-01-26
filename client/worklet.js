@@ -1,17 +1,15 @@
 // client/worklet.js
 
-// Import genish.js - the UMD wrapper will set genish on the global scope
-let genishLoadError = null;
-try {
-  // importScripts needs an absolute URL or a path relative to the worklet script
-  // Since the worklet is loaded from /client/worklet.js, we need to go up one level
-  importScripts('../genish.js');
-} catch (e) {
-  genishLoadError = e.toString();
-  console.error('[Worklet] Failed to import genish.js:', e, e.stack);
-}
+// genish.js and wave-dsp.js are bundled before this code
+// They provide genish and helper functions globally
 
-// After importScripts, genish should be available globally
+// Define wave() function in worklet scope for signal.js to use
+let waveRegistry = new Map();
+const wave = (label, graphFn) => {
+  waveRegistry.set(label, graphFn);
+};
+// Make wave() available globally for eval'd code
+globalThis.wave = wave;
 
 class GenishProcessor extends AudioWorkletProcessor {
   constructor() {
@@ -20,30 +18,18 @@ class GenishProcessor extends AudioWorkletProcessor {
     try {
       this.port.postMessage({ type: 'info', message: 'GenishProcessor constructor called' });
 
-      if (genishLoadError) {
-        this.port.postMessage({ type: 'error', message: `genish import error: ${genishLoadError}` });
-      }
+      const genish = globalThis.genish;
+      this.port.postMessage({ type: 'info', message: `genish type: ${typeof genish}` });
 
-      // Check if genish is available in the global scope
-      this.port.postMessage({ type: 'info', message: 'Checking for genish...' });
-
-      // In AudioWorkletGlobalScope, genish should be available globally
-      const genishCheck = (typeof globalThis !== 'undefined' && globalThis.genish) ? globalThis.genish :
-                          (typeof genish !== 'undefined' ? genish : undefined);
-
-      this.port.postMessage({ type: 'info', message: `genish type: ${typeof genishCheck}` });
-
-      if (!genishCheck) {
+      if (!genish) {
         this.port.postMessage({ type: 'error', message: 'genish is not available in worklet!' });
       } else {
-        this.port.postMessage({ type: 'info', message: `genish loaded, has cycle: ${typeof genishCheck.cycle}, has gen: ${typeof genishCheck.gen}` });
+        this.port.postMessage({ type: 'info', message: `genish loaded, has cycle: ${typeof genish.cycle}, has gen: ${typeof genish.gen}` });
       }
 
-      this.port.postMessage({ type: 'info', message: 'Setting up message handler...' });
       this.port.onmessage = this.handleMessage.bind(this);
-
       this.registry = new Map();
-      this.t = 0; // Global time accumulator
+      this.t = 0;
       this.sampleRate = 44100;
       this.logProcessOnce = true;
 
@@ -54,106 +40,130 @@ class GenishProcessor extends AudioWorkletProcessor {
   }
 
   handleMessage(event) {
-    const { type, label, graph, sampleRate } = event.data;
-    console.log(`[GenishProcessor] Message received: type='${type}', label='${label}'`);
+    const { type, code, sampleRate } = event.data;
+
     if (type === 'init') {
-        this.sampleRate = sampleRate;
-        console.log(`[GenishProcessor] Sample rate set to ${sampleRate}`);
-        return
+      this.sampleRate = sampleRate;
+      this.port.postMessage({ type: 'info', message: `Sample rate set to ${sampleRate}` });
+      return;
     }
 
-    if (type === 'add' || type === 'update') {
+    if (type === 'eval') {
+      // Evaluate signal.js code in worklet context
       try {
-        // Make genish available in eval scope
-        // In AudioWorkletGlobalScope, genish should be directly available
-        // Use 'gen' as variable name to avoid "Cannot access 'genish' before initialization" error
-        const gen = (typeof globalThis !== 'undefined' && globalThis.genish) ? globalThis.genish :
-                    (typeof genish !== 'undefined' ? genish : undefined);
+        waveRegistry.clear();
+        this.registry.clear(); // Clear the audio registry to remove old sounds
+        const genish = globalThis.genish;
 
-        if (!gen) {
-          throw new Error('genish is not available');
+        if (!genish) {
+          throw new Error('genish not available');
         }
-        if (!gen.gen || !gen.gen.createCallback) {
-          this.port.postMessage({ type: 'error', message: `genish.gen.createCallback not available. gen.gen type: ${typeof gen.gen}` });
-          throw new Error('genish.gen.createCallback not available');
+
+        this.port.postMessage({ type: 'info', message: 'Evaluating signal.js...' });
+
+        // Eval the code - wave() calls will populate waveRegistry
+        eval(code);
+
+        this.port.postMessage({ type: 'info', message: `Found ${waveRegistry.size} wave definitions` });
+
+        // Now compile all the waves
+        for (const [label, graphFn] of waveRegistry.entries()) {
+          this.compileWave(label, graphFn);
         }
-        this.port.postMessage({ type: 'info', message: 'About to eval and compile graph' });
 
-        // The graph string is a function like: "(t) => genish.mul(genish.cycle(440), 0.5)"
-        // We need to make genish available in the eval scope
-        const genish = gen; // Alias for use in eval
-
-        // Evaluate the function
-        const graphFn = eval(graph);
-
-        // Call the function with a dummy time to get the genish graph object
-        const genishGraph = graphFn(0);
-        this.port.postMessage({ type: 'info', message: `genishGraph type: ${typeof genishGraph}, name: ${genishGraph?.name}` });
-
-        // Now compile the genish graph into an optimized callback
-        const compiledCallback = gen.gen.createCallback(genishGraph, this.sampleRate);
-        this.port.postMessage({ type: 'info', message: `Successfully compiled signal '${label}'` });
-
-        const current = this.registry.get(label);
-
-        if (current && type === 'update') {
-          // Crossfade
-          this.registry.set(label, {
-            graph: compiledCallback,
-            oldGraph: current.graph,
-            fade: 0.0,
-            fadeDuration: 0.05 * this.sampleRate // 50ms fade
-          });
-        } else {
-          this.registry.set(label, { graph: compiledCallback, oldGraph: null, fade: 1.0 });
-        }
-        console.log(`[GenishProcessor] Registry now has ${this.registry.size} entries`);
+        this.port.postMessage({ type: 'info', message: `Compiled ${waveRegistry.size} waves successfully` });
       } catch (e) {
-        console.error(`[GenishProcessor] Error compiling graph for label '${label}':`, e);
-        this.port.postMessage({ type: 'error', message: e.toString(), stack: e.stack });
+        this.port.postMessage({ type: 'error', message: `Error evaluating signal.js: ${e.message}` });
+        console.error('[GenishProcessor] Eval error:', e);
       }
-    } else if (type === 'remove') {
-      this.registry.delete(label);
+      return;
+    }
+  }
+
+  compileWave(label, graphFn) {
+    try {
+      const genish = globalThis.genish;
+      if (!genish || !genish.gen || !genish.gen.createCallback) {
+        throw new Error('genish.gen.createCallback not available');
+      }
+
+      // Create time accumulator
+      const t = genish.accum(1 / this.sampleRate);
+
+      // Call the user's function with t to build the genish graph
+      const genishGraph = graphFn(t);
+
+      this.port.postMessage({ type: 'info', message: `Graph created for '${label}', name: ${genishGraph?.name}` });
+
+      // Compile the genish graph into an optimized callback
+      const compiledCallback = genish.gen.createCallback(genishGraph, genish.gen.memory);
+
+      // Create context object for calling the callback
+      const context = { memory: genish.gen.memory.heap };
+
+      const current = this.registry.get(label);
+      const updateType = current ? 'update' : 'add';
+
+      if (current && updateType === 'update') {
+        // Crossfade
+        this.registry.set(label, {
+          graph: compiledCallback,
+          context: context,
+          oldGraph: current.graph,
+          oldContext: current.context,
+          fade: 0.0,
+          fadeDuration: 0.05 * this.sampleRate
+        });
+      } else {
+        this.registry.set(label, { graph: compiledCallback, context: context, oldGraph: null, fade: 1.0 });
+      }
+
+      this.port.postMessage({ type: 'info', message: `Successfully compiled signal '${label}'` });
+    } catch (e) {
+      this.port.postMessage({ type: 'error', message: `Error compiling '${label}': ${e.message}` });
+      console.error('[GenishProcessor] Compilation error:', e);
     }
   }
 
   process(inputs, outputs, parameters) {
     if (this.logProcessOnce) {
-        this.port.postMessage({ type: 'info', message: `process() called, registry size: ${this.registry.size}` });
-        this.logProcessOnce = false;
+      this.port.postMessage({ type: 'info', message: `process() called, registry size: ${this.registry.size}` });
+      this.logProcessOnce = false;
     }
+
     const output = outputs[0];
     const channel = output[0];
 
     for (let i = 0; i < channel.length; i++) {
       let sample = 0;
-      this.t += 1 / this.sampleRate; // Increment global time
+      this.t += 1 / this.sampleRate;
 
       for (const [label, synth] of this.registry.entries()) {
         try {
-            let currentSample = 0;
+          let currentSample = 0;
 
-            // Call the compiled genish callback (no arguments needed, it generates the next sample)
-            currentSample += synth.graph();
+          // Call the compiled genish callback with the correct context
+          currentSample += synth.graph.call(synth.context);
 
-            // Handle crossfade if an old graph exists
-            if (synth.oldGraph) {
-              const oldSample = synth.oldGraph();
-              const fadeValue = synth.fade / synth.fadeDuration;
+          // Handle crossfade if an old graph exists
+          if (synth.oldGraph) {
+            const oldSample = synth.oldGraph.call(synth.oldContext);
+            const fadeValue = synth.fade / synth.fadeDuration;
 
-              currentSample = (currentSample * fadeValue) + (oldSample * (1 - fadeValue));
+            currentSample = (currentSample * fadeValue) + (oldSample * (1 - fadeValue));
 
-              synth.fade++;
-              if (synth.fade >= synth.fadeDuration) {
-                synth.oldGraph = null; // End of fade
-              }
+            synth.fade++;
+            if (synth.fade >= synth.fadeDuration) {
+              synth.oldGraph = null;
+              synth.oldContext = null;
             }
+          }
 
-            sample += currentSample;
+          sample += currentSample;
         } catch (e) {
-            this.port.postMessage({ type: 'error', message: `Runtime error in '${label}': ${e.toString()}` });
-            // Optionally, remove the faulty synth to prevent further errors
-            this.registry.delete(label);
+          this.port.postMessage({ type: 'error', message: `Runtime error in '${label}': ${e.toString()}` });
+          // Remove the faulty synth to prevent further errors
+          this.registry.delete(label);
         }
       }
 

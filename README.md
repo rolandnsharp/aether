@@ -42,6 +42,16 @@ You can also use this method from any terminal:
 echo "wave('tone', pipe(sin(220), gain(0.2)));" | bun run eval.ts
 ```
 
+## Building
+
+If you modify `wave-dsp.js` or `client/worklet.js`, you need to rebuild the worklet bundle:
+
+```bash
+cat genish.js wave-dsp.js client/worklet.js > client/worklet-bundled.js
+```
+
+This concatenates the three files into a single bundle that runs in the AudioWorklet context.
+
 ## How It Works
 
 The system has two pathways for code:
