@@ -50,6 +50,71 @@ The system has two pathways for code:
 
 In both cases, the `client/engine.js` running in the browser receives the code as a string and `eval()`s it. This executes calls to the `wave()` function, which compiles the `genish.js` audio graph and hot-swaps it in the `AudioWorklet`, ensuring a smooth crossfade for any updated sounds.
 
+## 🎼 KANON: Git-Performance Workflow
+
+In the KANON environment, your Git repository acts as your **Musical Score**. A "Commit" is not just a code backup—it is a **Snapshot of the math that creates your sound**. This section explains how to treat your Git history as a musical timeline.
+
+### 1. The Core Philosophy
+
+- **Commits = Patterns**: Each commit represents a specific state of your audio math.
+- **Branches = Movements**: Use branches to explore different musical directions (e.g., `git checkout -b heavy-techno`) without losing your original "ambient" set.
+- **Checkout = Time Travel**: Switching commits instantly re-renders the audio to that historical state.
+
+### 2. Setting Up the "Auto-Recorder"
+
+Ensure your `host.ts` (the Bun engine launcher) is running the Git Logger. This script monitors successful evaluations and snapshots them.
+
+**Automated Log Script (logger.ts)**
+```typescript
+import { execSync } from "child_process";
+
+export function snapshotPerformance(label: string) {
+  try {
+    execSync('git add .');
+    execSync(`git commit -m "PERF: ${label} at ${new Date().toISOString()}"`);
+    console.log(`✅ Snapshot recorded to Git tree.`);
+  } catch (e) {
+    // Silently fail if no changes were made to avoid log spam
+  }
+}
+```
+
+### 3. Performing in Vim
+
+**The "Snapshot" Hotkey**
+
+Add this to your `init.lua` (or `.vimrc`). This allows you to manually tag "Sweet Spots" in your math while you are playing.
+
+```lua
+-- Save and tag a specific musical moment as a 'Snapshot'
+vim.keymap.set('n', '<leader>gs', ':!git commit -am "SNAPSHOT: Sweet Spot"<CR>', { desc = "Manual Musical Snapshot" })
+```
+
+### 4. Time-Traveling (The Jog Wheel)
+
+When you turn your **Physical Jog Wheel**, the `eval.ts` script translates the MIDI rotation into a `git checkout` command.
+
+- **Turn Left (Rewind)**: The engine runs `git checkout HEAD~1`. The headless browser detects the file change, recompiles the old math, and the sound "reverts" to the previous state.
+- **Turn Right (Fast Forward)**: The engine runs `git checkout <next_hash>`.
+- **Visualizing the Tree**: Keep a terminal pane open running `tig` or `git log --graph`. You will see the "HEAD" marker move up and down the tree as you turn the wheel.
+
+### 5. Collaborative Performance (Remote Devs)
+
+Because this is standard Git, other developers can follow your live set in real-time.
+
+- **Pushing Live**: Run a background process: `while true; do git push origin main; sleep 10; done`.
+- **Developer View**: Other coders can `git clone` your set while you are playing. They can see exactly which `genish.js` math you are using and even send a Pull Request with a new synth patch that you can merge into your live set.
+
+### 6. The "Emergency Reset"
+
+If you experiment your way into a "digital scream" or a crash:
+
+1. Reach for your terminal.
+2. Type: `git reset --hard HEAD~1`.
+3. The engine instantly restores the last known good audio state.
+
+**KANON turns the terminal into a time-machine. You aren't just coding; you are curating a history of vibrations.**
+
 ## TODO / Future Enhancements
 
 - [ ] **Wrapping Time (The "Kanonical" Fix)**: Prevent floating-point precision loss during long sessions
