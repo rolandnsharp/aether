@@ -60,6 +60,83 @@ The system has two pathways for code:
 
 In both cases, the `client/engine.js` running in the browser receives the code as a string and `eval()`s it. This executes calls to the `wave()` function, which compiles the `genish.js` audio graph and hot-swaps it in the `AudioWorklet`, ensuring a smooth crossfade for any updated sounds.
 
+## The Philosophy: Pure Functions of Time
+
+KANON embraces the **"Pure Function of Time"** aesthetic from Incudine and Lisp-based live coding systems. In this paradigm, sound is expressed as mathematical equations where time (`t`) is the primary variable.
+
+### Why Wrap Time?
+
+In genish.js, `t` is created using `genish.accum(1/44100)` - a continuously growing ramp from 0 to infinity. While mathematically pure, this causes two problems:
+
+1. **Floating-Point Precision Loss**: After a few seconds, `t` becomes so large that 64-bit floats lose precision. The "steps" between representable numbers become larger than the increments needed for smooth oscillation, causing aliasing and digital noise.
+
+2. **Phase Explosion**: For a 440Hz sine wave, the phase value `2π * 440 * t` grows extremely large very quickly, making the math unstable.
+
+**The Solution**: Wrap `t` using `mod(t, 1)` to create a local time `T` that resets every second. Since sine is periodic every 2π, this mathematical transformation is sonically transparent but numerically stable.
+
+### Two Approaches to Synthesis
+
+KANON supports two philosophies for creating sound:
+
+#### 1. The Optimized Way (Recommended for Oscillators)
+
+Use `cycle(freq)` - genish's built-in oscillator that handles phase internally and is stable forever:
+
+```javascript
+wave('bass', t => mul(cycle(110), 0.6));
+```
+
+**Why**: `cycle()` is optimized C-speed code that never loses precision, even after hours of playback.
+
+#### 2. The Pure Math Way (For Mathematical Expression)
+
+Use the `signal` helper to express sound as pure mathematical functions:
+
+```javascript
+wave('bass', t => signal(t, T =>
+  mul(sin(mul(2, PI, 110, T)), 0.6)
+));
+```
+
+**Why**: This is "playing the math" - expressing sound as `sin(2π * freq * T)` just like you would write it on paper. The `signal` helper wraps `t` to keep precision stable.
+
+### Examples of Pure Math Synthesis
+
+**FM Bell** - Frequency modulation using time:
+```javascript
+wave('bell', t => signal(t, T => {
+  const modulator = mul(sin(mul(2, PI, 5, T)), 50);  // 5Hz LFO, 50Hz depth
+  const carrierFreq = add(880, modulator);
+  return mul(sin(mul(2, PI, carrierFreq, T)), 0.3);
+}));
+```
+
+**Binaural Beating** - Spatial phase offset:
+```javascript
+wave('space', t => signal(t, T => {
+  const left = mul(sin(mul(2, PI, 440, T)), 0.2);
+  const right = mul(sin(mul(2, PI, 445, T)), 0.2);  // 5Hz difference
+  return [left, right];  // Stereo output
+}));
+```
+
+**Rhythmic Gate** - Boolean logic with time:
+```javascript
+wave('pulse', t => signal(t, T => {
+  const beat = gt(sin(mul(2, PI, 2, T)), 0.9);  // Trigger every 0.5s
+  const tone = sin(mul(2, PI, 220, T));
+  return mul(tone, beat, 0.4);
+}));
+```
+
+### Critical Details
+
+- **`t` is a genish graph node**, not a number. You must use `mul()`, `add()`, `sin()` etc. from genish - standard JavaScript operators (`*`, `+`, `Math.sin`) won't work.
+- **`Math.PI` is fine** - it's a JavaScript constant that gets compiled as a literal number in the genish callback.
+- **Mixing approaches** - Use `cycle()` for carrier oscillators, use `T` (wrapped time) for modulation and envelopes.
+
+This gives you the Lisp/Incudine ability to "play the math" with clean arrow function syntax, while maintaining the industrial-grade stability needed for live performance.
+
 ## 🎼 KANON: Git-Performance Workflow
 
 In the KANON environment, your Git repository acts as your **Musical Score**. A "Commit" is not just a code backup—it is a **Snapshot of the math that creates your sound**. This section explains how to treat your Git history as a musical timeline.
