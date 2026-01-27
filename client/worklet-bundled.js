@@ -46,7 +46,7 @@
 
 		let MemoryHelper = {
 		  
-		  create( sizeOrBuffer=4096, memtype=Float32Array ) {
+		  create( sizeOrBuffer=16384, memtype=Float32Array ) {
 		    let helper = Object.create( this );
 
 		    // conveniently, buffer constructors accept either a size or an array buffer to use...
@@ -731,7 +731,7 @@
 		    }
 		  },
 
-		  createMemory( amount=4096, type ) {
+		  createMemory( amount=16384, type ) {
 		    const mem = MemoryHelper.create( amount, type );
 		    return mem
 		  },
@@ -6260,6 +6260,10 @@ class GenishProcessor extends AudioWorkletProcessor {
           globalThis.STATE_BUFFER[i] = 0.001 * i;
         }
         this.port.postMessage({ type: 'info', message: `STATE buffer created, first value: ${globalThis.STATE_BUFFER[0]}` });
+
+        // Wrap with genish.data() ONCE - reuse across all compilations
+        globalThis.STATE = genish.data(globalThis.STATE_BUFFER, 1);
+        this.port.postMessage({ type: 'info', message: `STATE wrapped: ${globalThis.STATE.name}` });
       }
 
       // Create sine wavetable for genish stateful oscillators
@@ -6270,6 +6274,10 @@ class GenishProcessor extends AudioWorkletProcessor {
           globalThis.SINE_TABLE_BUFFER[i] = Math.sin((i / 2048) * Math.PI * 2);
         }
         this.port.postMessage({ type: 'info', message: 'Sine wavetable created (2048 samples)' });
+
+        // Wrap with genish.data() ONCE - reuse across all compilations
+        globalThis.SINE_TABLE = genish.data(globalThis.SINE_TABLE_BUFFER, 1, { immutable: true });
+        this.port.postMessage({ type: 'info', message: `SINE_TABLE wrapped: ${globalThis.SINE_TABLE.name}` });
       }
 
       this.port.onmessage = this.handleMessage.bind(this);
@@ -6331,24 +6339,8 @@ class GenishProcessor extends AudioWorkletProcessor {
         throw new Error('genish.gen.createCallback not available');
       }
 
-      // CRITICAL: Create STATE data object in CURRENT genish.gen.memory context
-      // This ensures STATE is registered in the same memory space as the graph
-      globalThis.STATE = genish.data(globalThis.STATE_BUFFER, 1);
-      this.port.postMessage({
-        type: 'info',
-        message: `STATE created: ${JSON.stringify({
-          name: globalThis.STATE.name,
-          length: globalThis.STATE_BUFFER.length,
-          first: globalThis.STATE_BUFFER[0]
-        })}`
-      });
-
-      // Wrap sine wavetable with genish.data() for peek() access
-      globalThis.SINE_TABLE = genish.data(globalThis.SINE_TABLE_BUFFER, 1, { immutable: true });
-      this.port.postMessage({
-        type: 'info',
-        message: `SINE_TABLE created: ${globalThis.SINE_TABLE.name}, length: ${globalThis.SINE_TABLE_BUFFER.length}`
-      });
+      // STATE and SINE_TABLE are created once in constructor and reused
+      // No need to recreate genish.data() wrappers on every compilation
 
       // Create time accumulator
       const t = genish.accum(1 / this.sampleRate);
@@ -6380,17 +6372,16 @@ class GenishProcessor extends AudioWorkletProcessor {
       const current = this.registry.get(label);
 
       if (current) {
-        // Hot-swap: crossfade from old to new (50ms)
+        // Hot-swap: instant replacement (no crossfade needed for stateful patterns)
+        // Phase continuity in STATE_BUFFER prevents clicks
         this.registry.set(label, {
           graph: compiledCallback,
           context: context,
           update: updateFn,
-          oldGraph: current.graph,
-          oldContext: current.context,
-          fade: 0.0,
-          fadeDuration: 0.05 * this.sampleRate
+          oldGraph: null,
+          fade: 1.0
         });
-        this.port.postMessage({ type: 'info', message: `Recompiled '${label}' (crossfading)` });
+        this.port.postMessage({ type: 'info', message: `Recompiled '${label}' (instant swap)` });
       } else {
         // First compilation
         this.registry.set(label, { graph: compiledCallback, context: context, update: updateFn, oldGraph: null, fade: 1.0 });

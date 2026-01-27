@@ -46,7 +46,7 @@
 
 		let MemoryHelper = {
 		  
-		  create( sizeOrBuffer=4096, memtype=Float32Array ) {
+		  create( sizeOrBuffer=16384, memtype=Float32Array ) {
 		    let helper = Object.create( this );
 
 		    // conveniently, buffer constructors accept either a size or an array buffer to use...
@@ -731,7 +731,7 @@
 		    }
 		  },
 
-		  createMemory( amount=4096, type ) {
+		  createMemory( amount=16384, type ) {
 		    const mem = MemoryHelper.create( amount, type );
 		    return mem
 		  },
