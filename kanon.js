@@ -42,18 +42,20 @@ export function kanon(id, factory) {
 
 /**
  * Mix all registered signals and apply soft clipping
- * @param {number} sampleRate - Sample rate (e.g., 44100)
+ * @param {number} sampleRate - Sample rate (e.g., 48000)
  * @returns {Array<number>} - Mixed vector [ch0, ch1, ...] clipped with tanh
  */
 export function updateAll(sampleRate) {
   const mixedVector = new Float64Array(STRIDE);
 
   // Mix all signals
+  let signalCount = 0;
   for (const signal of registry.values()) {
     const vector = signal.update(sampleRate);
     for (let i = 0; i < STRIDE; i++) {
       mixedVector[i] += vector[i] || 0;
     }
+    signalCount++;
   }
 
   // Soft-clip every channel for safety and warmth
