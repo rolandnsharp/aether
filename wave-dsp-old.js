@@ -15,11 +15,13 @@
 //
 // 2. LEGACY PATTERN - Manual peek/poke (for advanced DSP):
 //    kanon('drone', () => {
-//      const phase = peek(globalThis.STATE, 0);
+//      const phase = peek(globalThis.STATE, 0, { mode: 'samples' });
 //      const newPhase = mod(add(phase, 440/44100), 1.0);
 //      poke(globalThis.STATE, newPhase, 0);
 //      return peek(globalThis.SINE_TABLE, newPhase);
 //    })
+//
+//    CRITICAL: Always use { mode: 'samples' } when peeking STATE buffer!
 //
 //    Pros: Full control for feedback loops, physical models, custom DSP
 //    Cons: More verbose, manual slot management
@@ -27,7 +29,7 @@
 // 3. HYBRID - Mix high-level sugar with manual state (slots 0-99 reserved):
 //    kanon('drift', () => {
 //      const carrier = osc(440);  // Auto-slotted (100+)
-//      const drift = peek(globalThis.STATE, 0);  // Manual (0-99)
+//      const drift = peek(globalThis.STATE, 0, { mode: 'samples' });  // Manual (0-99)
 //      poke(globalThis.STATE, drift + 0.01, 0);
 //      return mul(carrier, 0.5);
 //    })
@@ -230,6 +232,26 @@ const lfo = (rate) => {
   return g.mul(g.add(signal, 1.0), 0.5);  // Convert -1..1 to 0..1
 };
 
+// Feedback chaos oscillator - output modulates its own frequency
+// Returns genish graph with recursive feedback
+const feedbackOsc = (baseFreq, feedbackAmount, outSlot = 10, phaseSlot = 11) => {
+  // 1. Read the state from the PREVIOUS sample
+  const lastOut = g.peek(globalThis.STATE, outSlot, { mode: 'samples' });
+  const phase = g.peek(globalThis.STATE, phaseSlot, { mode: 'samples' });
+
+  // 2. Linear Calculation (No circular references here)
+  const inc = g.add(g.div(baseFreq, 44100), g.mul(lastOut, feedbackAmount));
+  const nextPhase = g.mod(g.add(phase, inc), 1.0);
+  const nextOut = g.peek(globalThis.SINE_TABLE, nextPhase);
+
+  // 3. Side-effect writes
+  g.poke(globalThis.STATE, nextPhase, phaseSlot);
+  g.poke(globalThis.STATE, nextOut, outSlot);
+
+  // 4. Critical: Wrap the output in a MEMO to break the compiler's circular check
+  return g.memo(nextOut);
+};
+
 // ============================================================================
 // HELPERS (Composition and mixing)
 // ============================================================================
@@ -354,6 +376,7 @@ globalScope.wobble = wobble;
 // Auto-slot oscillators (Tier 1: The Musician)
 globalScope.osc = osc;
 globalScope.lfo = lfo;
+globalScope.feedbackOsc = feedbackOsc;
 
 // Composition helpers
 globalScope.voices = voices;

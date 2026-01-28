@@ -12,9 +12,9 @@
 // Code reduction: 40+ lines → 1 line (98% reduction!)
 
 // Arrow function for deterministic slot allocation
-kanon('minimal-drone', () =>
-  withLfo(mixGain(voices(343, 1, 3), 1.0), 0.8, 0.85)
-);
+// kanon('minimal-drone', () =>
+//   withLfo(mixGain(voices(343, 1, 3), 1.0), 0.8, 0.85)
+// );
 
 // ============================================================================
 // MULTIPLE WAVES DEMO - Each wave needs a UNIQUE label to play together!
@@ -26,23 +26,22 @@ kanon('minimal-drone', () =>
 // );
 
 // Wave 2: Mid drone (plays AT THE SAME TIME as bass)
-kanon('mid', () =>
-  withLfo(mixGain(voices(220, 3, 4), 0.25), 0.5, 0.20)
-);
+// kanon('mid', () =>
+//   withLfo(mixGain(voices(220, 3, 4), 0.25), 0.5, 0.20)
+// );
 
 // Wave 3: High lead (ready to become looper later)
 // kanon('lead', () =>
-//   mul(osc(440), 0.15)
-// );
 
+  
 // ============================================================================
 // ALTERNATIVE STYLES
 // ============================================================================
 
 // Method chaining style (more readable for complex chains)
 // kanon('chaining-drone', () =>
-//   $(mix(...voices(375, 2, 4)))
-//     .mod(0.3, 0.25)
+//   $(mix(...voices(432, 2, 4)))
+//     .mod(3, 0.25)
 //     .mul(0.4)
 //     .unwrap()
 // );
@@ -63,13 +62,13 @@ kanon('mid', () =>
 // kanon('drifting-drone', () => {
 //   // Auto-slot oscillator
 //   const carrier = mul(osc(440), 0.5);
-//
-//   // Manual state for drift (slot 0)
-//   const driftVal = peek(globalThis.STATE, 0);
+
+//   // Manual state for drift (slot 0) - CRITICAL: use { mode: 'samples' }
+//   const driftVal = peek(globalThis.STATE, 0, { mode: 'samples' });
 //   const lfoVal = mul(lfo(0.5), 0.1);
 //   const newDrift = mod(add(driftVal, lfoVal), 10);
 //   poke(globalThis.STATE, newDrift, 0);
-//
+
 //   return carrier;
 // });
 
@@ -78,10 +77,11 @@ kanon('mid', () =>
 // ============================================================================
 // Full manual control - patterns impossible with standard oscillators
 
-// Feedback chaos (non-linear feedback loop)
-// kanon('feedback-chaos', () => {
-//   const last = peek(globalThis.STATE, 0);
-//   const next = sin(add(last, mul(last, 0.5)));
-//   poke(globalThis.STATE, next, 0);
-//   return mul(next, 0.3);
-// });
+// STATE TEST: Diagnostic to verify peek/poke execution order
+
+// Feedback chaos with safe low feedback to test stability
+kanon('chaos', () => {
+  // Start with very low feedback (0.01) to verify stability
+  return mul(feedbackOsc(210, 0.01, 10, 11), 0.2);
+});
+ 
