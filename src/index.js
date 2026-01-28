@@ -1,142 +1,90 @@
-const Speaker = require('speaker');
-
-// Kanon registry for named functions (hot reload support)
-const registry = new Map();
-
-// Audio configuration
-const SAMPLE_RATE = 48000;
-const CHANNELS = 2;  // Stereo
-const BIT_DEPTH = 16;
-
-// Global time tracker
-let currentTime = 0;
-
-// Speaker instance
-let speaker = null;
-let isPlaying = false;
-
+// src/index.js
 // ============================================================================
-// CORE KANON FUNCTION
+// Kanon Core - Compiler, Registry, and Engine Orchestration
 // ============================================================================
 
-function kanon(name, fn) {
-  // Auto-start audio on first kanon
-  if (!isPlaying) {
-    startAudio();
+const { Conductor } = require('./audio_engine/engine.js');
+const { Player } = require('./audio_engine/player.js');
+const { createTransport } = require('./audio_engine/transport.js');
+
+// --- Compiler Cache for memoization ---
+const playerCache = new Map(); // Maps recipe.toString() -> Player instance
+const idToRecipeString = new Map(); // Maps player ID -> recipe.toString()
+
+// ============================================================================
+// CORE KANON FUNCTION (The Compiler)
+// ============================================================================
+function kanon(id, recipe) {
+  if (typeof id !== 'string' || id.length === 0) {
+    throw new Error('Player ID must be a non-empty string.');
+  }
+  if (typeof recipe !== 'function') {
+    throw new Error('Recipe must be a function f(t).');
   }
 
-  // Register the function
-  registry.set(name, fn);
+  // --- Memoization ---
+  const recipeString = recipe.toString();
+  let player = playerCache.get(recipeString);
 
-  return fn;
+  if (!player) {
+    // Recipe has not been seen before, create new Player and cache it
+    player = new Player(recipe);
+    playerCache.set(recipeString, player);
+    console.log(`[Compiler] New player created for recipe ID: ${id}`);
+  } else {
+    console.log(`[Compiler] Reusing player from cache for recipe ID: ${id}`);
+  }
+
+  // Keep track of which recipe string is associated with this ID
+  idToRecipeString.set(id, recipeString);
+
+  // Tell Conductor to use this player for this ID.
+  // Conductor handles crossfading if an old player for this ID existed.
+  Conductor.setPlayer(id, player);
+
+  return player.recipe; // Return the original recipe for chaining/inspection
 }
 
 // ============================================================================
-// REGISTRY MANAGEMENT
+// REGISTRY MANAGEMENT (Delegated to Conductor)
 // ============================================================================
 
-kanon.list = function() {
-  return Array.from(registry.keys());
+kanon.boot = function() {
+  if (Conductor.status().running) return; // Boot only once
+  // globalThis.SAMPLE_RATE is set in engine.js
+  const transportInstance = createTransport('PUSH', globalThis.SAMPLE_RATE);
+  Conductor.start(transportInstance);
 };
 
-kanon.remove = function(name) {
-  registry.delete(name);
+kanon.list = function() {
+  return Array.from(Conductor.status().activePlayers.keys());
+};
+
+kanon.remove = function(id) {
+  Conductor.removePlayer(id);
+  // No need to remove from playerCache, as another ID might still use it.
+  // Only remove idToRecipeString mapping.
+  idToRecipeString.delete(id);
 };
 
 kanon.clear = function() {
-  registry.clear();
+  Conductor.clearPlayers();
+  playerCache.clear(); // Clear all cached players
+  idToRecipeString.clear(); // Clear mapping
 };
 
 // ============================================================================
-// AUDIO OUTPUT
+// AUDIO CONTROL (Delegated to Conductor)
 // ============================================================================
 
-function startAudio() {
-  if (isPlaying) return;
-
-  speaker = new Speaker({
-    channels: CHANNELS,
-    bitDepth: BIT_DEPTH,
-    sampleRate: SAMPLE_RATE
-  });
-
-  isPlaying = true;
-  currentTime = 0;
-
-  // Generate audio in chunks
-  const BUFFER_SIZE = 4096;
-  const buffer = Buffer.alloc(BUFFER_SIZE * CHANNELS * (BIT_DEPTH / 8));
-
-  function writeNextBuffer() {
-    if (!isPlaying) return;
-
-    fillBuffer(buffer, currentTime);
-    currentTime += BUFFER_SIZE / SAMPLE_RATE;
-
-    speaker.write(buffer, writeNextBuffer);
-  }
-
-  writeNextBuffer();
-}
-
-function fillBuffer(buffer, startTime) {
-  const samplesPerChannel = buffer.length / CHANNELS / (BIT_DEPTH / 8);
-  const dt = 1 / SAMPLE_RATE;
-
-  for (let i = 0; i < samplesPerChannel; i++) {
-    const t = startTime + (i * dt);
-
-    // Mix all registered functions
-    let leftSample = 0;
-    let rightSample = 0;
-
-    for (const fn of registry.values()) {
-      const output = fn(t);
-
-      if (typeof output === 'number') {
-        // Mono signal - add to both channels
-        leftSample += output;
-        rightSample += output;
-      } else if (Array.isArray(output)) {
-        // Stereo signal [left, right]
-        leftSample += output[0];
-        rightSample += output[1];
-      }
-    }
-
-    // Clamp to [-1, 1]
-    leftSample = Math.max(-1, Math.min(1, leftSample));
-    rightSample = Math.max(-1, Math.min(1, rightSample));
-
-    // Convert to 16-bit integer
-    const leftInt = Math.floor(leftSample * 32767);
-    const rightInt = Math.floor(rightSample * 32767);
-
-    // Write to buffer (little-endian)
-    const offset = i * CHANNELS * (BIT_DEPTH / 8);
-    buffer.writeInt16LE(leftInt, offset);
-    buffer.writeInt16LE(rightInt, offset + 2);
-  }
-}
-
-function stopAudio() {
-  isPlaying = false;
-  if (speaker) {
-    speaker.end();
-    speaker = null;
-  }
-}
-
-kanon.stopAudio = stopAudio;
-
-// Handle cleanup on exit
-process.on('SIGINT', () => {
-  stopAudio();
-  process.exit(0);
-});
+kanon.stopAudio = function() {
+  Conductor.stop();
+  playerCache.clear(); // Clear all cached players on stop
+  idToRecipeString.clear();
+};
 
 // ============================================================================
-// EXPORTS
+// Exports
 // ============================================================================
 
-module.exports = kanon;
+module.exports = kanon; // Export the compiler as the main kanon interface

@@ -50,6 +50,9 @@ function loadSession() {
     // Load the session file
     require(sessionPath);
 
+    // Boot the audio engine now that players are registered
+    kanon.boot();
+
     // Get functions after reload
     const afterFunctions = new Set(kanon.list());
 
