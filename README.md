@@ -90,7 +90,7 @@ kanon('binaural', t => [
 ## Hot Reload
 
 ```bash
-bun src/runner.js session.js
+bun src/runner.js live-sessions/your-session-file.js
 ```
 
 Edit `session.js` and save - changes apply immediately.
@@ -117,7 +117,7 @@ By treating signals as functions of time, we honor this view and can explore:
 - Fractal self-similarity
 - Pure mathematical relationships
 
-See [docs/KANON-FLUX-DUALITY.md](./docs/KANON-FLUX-DUALITY.md) for the philosophical foundation.
+See [Kanon-Flux Duality](./docs/5-mathematical-foundations/Kanon-Flux-Duality.md) for the philosophical foundation.
 
 ## Technology Choices
 
@@ -128,9 +128,13 @@ See [docs/KANON-FLUX-DUALITY.md](./docs/KANON-FLUX-DUALITY.md) for the philosoph
 
 ## Documentation
 
-- [KANON-FLUX-DUALITY.md](./docs/KANON-FLUX-DUALITY.md) - Philosophy and relationship to Flux
-- [COMPOSITION-STYLES.md](./docs/COMPOSITION-STYLES.md) - Different ways to compose functions
-- [EXAMPLES.md](./docs/EXAMPLES.md) - Example code and patterns
+All documentation has been moved to the [`docs`](./docs/Home.md) directory.
+
+Key topics include:
+- **Getting Started:** [Core Concepts](./docs/1-getting-started/Core-Concepts.md), [Quick Start](./docs/1-getting-started/Quick-Start.md)
+- **API Reference:** [Composition Styles](./docs/2-api-reference/Composition-Styles.md)
+- **Generative Music:** [Constraint-Based Generation](./docs/4-generative-music/Constraint-Based.md), [The Y-Combinator](./docs/4-generative-music/Y-Combinator.md)
+- **Mathematical Foundations:** [Category Theory](./docs/5-mathematical-foundations/Category-Theory.md), [Kanon-Flux Duality](./docs/5-mathematical-foundations/Kanon-Flux-Duality.md)
 
 ## Example Session
 
