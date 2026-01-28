@@ -42,23 +42,42 @@ import { kanon } from './kanon.js';
 // });
 
 // ============================================================================
-// EXAMPLE 2: Simple Sine Oscillator (Fast & Musical)
+// EXAMPLE 2: Vortex Morph (Phase-Modulated Feedback Loop)
 // ============================================================================
-// A basic sine wave - the "hello world" of audio DSP
+// An organic, growling cello-like tone that continuously evolves
+// Uses phase modulation for complex, non-linear harmonics
 
-kanon('sine-drone', (mem, idx) => {
-  const freq = 220.0; // A3 note - change this live!
+kanon('vortex-morph', (mem, idx) => {
+  // --- SURGERY PARAMS (change these live!) ---
+  const baseFreq = 110.0;    // Deep G2 note
+  const modRatio = 1.618;    // Golden Ratio (non-harmonic shimmer)
+  const morphSpeed = 0.2;    // How fast the "vortex" breathes (Hz)
+  const intensity = 5.0;     // Modulation depth (try 50.0 for chaos!)
 
   return {
     update: (sr) => {
-      // Increment phase (0..1)
-      let phase = mem[idx];
-      phase = (phase + freq / sr) % 1.0;
-      mem[idx] = phase;
+      // 1. Accumulate three phases
+      let p1 = mem[idx];     // Carrier Phase
+      let p2 = mem[idx + 1]; // Modulator Phase
+      let t  = mem[idx + 2]; // Global LFO for morphing
 
-      // Convert to sine wave
-      const output = Math.sin(phase * 2 * Math.PI) * 0.3;
-      return [output]; // Mono output
+      p1 = (p1 + baseFreq / sr) % 1.0;
+      p2 = (p2 + (baseFreq * modRatio) / sr) % 1.0;
+      t  = (t + morphSpeed / sr) % 1.0;
+
+      mem[idx] = p1;
+      mem[idx + 1] = p2;
+      mem[idx + 2] = t;
+
+      // 2. The Functional Surgery
+      // Use the second osc to warp the time-space of the first osc
+      const depthLFO = Math.sin(t * 2 * Math.PI) * intensity;
+      const modulator = Math.sin(p2 * 2 * Math.PI) * depthLFO;
+
+      const sample = Math.sin(p1 * 2 * Math.PI + modulator);
+
+      // Return as a mono-vector (STRIDE 1)
+      return [sample * 0.5];
     }
   };
 });

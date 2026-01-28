@@ -12,42 +12,33 @@ import { createTransport } from './transport.js';
 // ============================================================================
 
 const SAMPLE_RATE = 44100;
-const FILL_INTERVAL_MS = 5; // Fill buffer every 5ms (more aggressive)
 
 // ============================================================================
 // Engine State
 // ============================================================================
 
 let transport = null;
-let fillTimerHandle = null;
 let isRunning = false;
 
 // ============================================================================
-// Producer Loop (Filling the Well)
+// Producer Loop (Filling the Well) - setImmediate for maximum throughput
 // ============================================================================
 
 function fillBuffer() {
   if (!isRunning) return;
 
-  // Fill aggressively to prevent underruns
-  let filled = 0;
-  const targetFill = 2048; // Fill more samples per cycle
+  // Fill aggressively - up to 2048 samples per cycle
   const space = ringBuffer.availableSpace();
-
-  // Fill up to target or available space
-  const toFill = Math.min(targetFill, space);
+  const toFill = Math.min(2048, space);
 
   for (let i = 0; i < toFill; i++) {
     const vector = updateAll(SAMPLE_RATE);
     if (!ringBuffer.write(vector)) break;
-    filled++;
   }
 
-  // Warn if buffer is getting low
-  const available = ringBuffer.availableData();
-  if (available < 1024) {
-    console.warn(`[Engine] Buffer low! ${available}/${ringBuffer.size} frames`);
-  }
+  // Yield to event loop, then immediately continue
+  // This creates a "saturation" loop that keeps buffer under high pressure
+  setImmediate(fillBuffer);
 }
 
 // ============================================================================
@@ -79,9 +70,9 @@ export function start() {
   // Create transport (speaker.js for now)
   transport = createTransport('PUSH', ringBuffer, SAMPLE_RATE);
 
-  // Start producer loop
+  // Start producer loop (setImmediate for saturation)
   isRunning = true;
-  fillTimerHandle = setInterval(fillBuffer, FILL_INTERVAL_MS);
+  setImmediate(fillBuffer);
 
   console.log(`[Engine] Running at ${SAMPLE_RATE}Hz, STRIDE=${ringBuffer.stride}`);
 }
@@ -94,12 +85,7 @@ export function stop() {
 
   console.log('[Engine] Stopping audio engine...');
 
-  isRunning = false;
-
-  if (fillTimerHandle) {
-    clearInterval(fillTimerHandle);
-    fillTimerHandle = null;
-  }
+  isRunning = false; // This breaks the setImmediate loop
 
   if (transport) {
     transport.stop();
