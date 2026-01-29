@@ -1,28 +1,31 @@
 // src/audio_engine/engine.js
+// ='use strict';
 // ============================================================================
 // Conductor (engine.js) - Manages Players, fills Ring Buffer, and controls clock
+//
+// Refactored for N-Dimensional Audio. The mixing loop now performs vector addition.
 // ============================================================================
 
 const { ringBuffer } = require('./storage.js');
 const { Player } = require('./player.js');
 
 // --- Configuration Constants ---
-const SAMPLE_RATE = 44100; // Hardcoded for Phase 1 as per proposal
-const CHANNELS = ringBuffer.stride; // Currently 1 (Mono)
+const SAMPLE_RATE = 48000;
+const STRIDE = ringBuffer.stride; // Get STRIDE from storage.
 const FADE_DURATION_MS = 10;
 const FADE_DURATION_SAMPLES = (FADE_DURATION_MS / 1000) * SAMPLE_RATE;
 
 // --- Global State ---
-globalThis.CHRONOS = 0; // Global sample counter (Float64)
-globalThis.SAMPLE_RATE = SAMPLE_RATE; // Expose for recipes if needed
+globalThis.CHRONOS = 0;
+globalThis.SAMPLE_RATE = SAMPLE_RATE;
 globalThis.dt = 1 / SAMPLE_RATE;
 
 let isRunning = false;
 let transport = null;
 
 // --- Player Management ---
-const activePlayers = new Map();      // Players currently generating sound
-const fadingOutPlayers = new Map();   // Players that are fading out
+const activePlayers = new Map();
+const fadingOutPlayers = new Map();
 
 // --- Conductor Core ---
 /**
@@ -31,19 +34,33 @@ const fadingOutPlayers = new Map();   // Players that are fading out
 function fillBufferLoop() {
   if (!isRunning) return;
 
-  const framesPerCycle = 128;
+  const framesPerCycle = 2048;
   const toFill = Math.min(framesPerCycle, ringBuffer.availableSpace());
 
+  // Pre-allocate a vector for mixing to avoid GC churn in the hot loop.
+  const mixedFrame = new Array(STRIDE).fill(0);
+
   for (let i = 0; i < toFill; i++) {
-    let mixedSample = 0;
+    // Reset mix vector for each new frame.
+    for (let c = 0; c < STRIDE; c++) mixedFrame[c] = 0;
+
     const currentT = globalThis.CHRONOS * globalThis.dt;
 
+    // --- Vector Addition for Active Players ---
     for (const player of activePlayers.values()) {
-      mixedSample += player.update(currentT);
+      const playerFrame = player.update(currentT); // Player returns a vector [L, R, ...]
+      for (let c = 0; c < STRIDE; c++) {
+        mixedFrame[c] += playerFrame[c];
+      }
     }
 
+    // --- Vector Addition for Fading Out Players ---
     for (const [id, player] of fadingOutPlayers.entries()) {
-      mixedSample += player.update(currentT);
+      const playerFrame = player.update(currentT);
+      for (let c = 0; c < STRIDE; c++) {
+        mixedFrame[c] += playerFrame[c];
+      }
+
       const fadeProgress = (globalThis.CHRONOS - player.fadeStartTime) / FADE_DURATION_SAMPLES;
       const newVolume = Math.max(0, 1 - fadeProgress);
       player.setCrossfadeVolume(newVolume);
@@ -52,98 +69,84 @@ function fillBufferLoop() {
       }
     }
 
-    mixedSample = Math.tanh(mixedSample);
+    // --- Per-Channel Soft Clipping ---
+    for (let c = 0; c < STRIDE; c++) {
+      mixedFrame[c] = Math.tanh(mixedFrame[c]);
+    }
 
-    if (!ringBuffer.write([mixedSample])) {
-      // This can happen if the buffer is full, which is expected.
+    if (!ringBuffer.write(mixedFrame)) {
+      // Buffer full, expected.
     }
 
     globalThis.CHRONOS++;
   }
 
-  // Schedule the next cycle.
-  // Using setTimeout(..., 1) instead of setImmediate() is a crucial tweak.
-  // setImmediate can be too aggressive, causing the producer to spin in a tight
-  // busy-wait loop when the buffer is full. This starves the event loop and can
-  // cause audio glitches (choppiness). setTimeout(..., 1) yields the CPU
-  // more gracefully, giving the consumer (audio hardware) time to run.
-  setTimeout(fillBufferLoop, 1);
+  setImmediate(fillBufferLoop);
 }
 
-/**
- * Public API for the Conductor (Engine)
- */
 const Conductor = {
   start: (transportInstance) => {
-    if (isRunning) {
-      console.log('[Engine] Conductor already running.');
-      return;
-    }
+    if (isRunning) return;
     transport = transportInstance;
     isRunning = true;
     globalThis.CHRONOS = 0;
 
-    console.log(`[Engine] Conductor starting at ${SAMPLE_RATE}Hz. Fade duration: ${FADE_DURATION_MS}ms.`);
+    console.log(`[Engine] Conductor starting at ${SAMPLE_RATE}Hz. STRIDE=${STRIDE}. Fade duration: ${FADE_DURATION_MS}ms.`);
 
+    // --- Pre-fill loop adapted for vector math ---
     const preFillTargetFrames = ringBuffer.capacity * 0.75;
-    let preFilledFrames = 0;
-    while (preFilledFrames < preFillTargetFrames) {
-        let mixedSample = 0;
-        const currentT = globalThis.CHRONOS * globalThis.dt;
-        for (const player of activePlayers.values()) {
-            mixedSample += player.update(currentT);
+    const mixedFrame = new Array(STRIDE);
+    for (let i = 0; i < preFillTargetFrames; i++) {
+      for (let c = 0; c < STRIDE; c++) mixedFrame[c] = 0;
+      const currentT = globalThis.CHRONOS * globalThis.dt;
+      for (const player of activePlayers.values()) {
+        const playerFrame = player.update(currentT);
+        for (let c = 0; c < STRIDE; c++) {
+          mixedFrame[c] += playerFrame[c];
         }
-        mixedSample = Math.tanh(mixedSample);
-        if (!ringBuffer.write([mixedSample])) break;
-        globalThis.CHRONOS++;
-        preFilledFrames++;
+      }
+      for (let c = 0; c < STRIDE; c++) {
+        mixedFrame[c] = Math.tanh(mixedFrame[c]);
+      }
+      if (!ringBuffer.write(mixedFrame)) break;
+      globalThis.CHRONOS++;
     }
-    console.log(`[Engine] Pre-filled ${preFilledFrames} frames to ring buffer.`);
+    console.log(`[Engine] Pre-filled ${preFillTargetFrames} frames to ring buffer.`);
 
     transport.start();
-    // Use setTimeout for the first call as well for consistency.
-    setTimeout(fillBufferLoop, 1);
+    setImmediate(fillBufferLoop);
   },
-
+  
+  // ... (stop, setPlayer, removePlayer, clearPlayers, status remain the same) ...
   stop: () => {
     if (!isRunning) return;
     isRunning = false;
-    if (transport) {
-      transport.stop();
-      transport = null;
-    }
+    if (transport) transport.stop();
+    transport = null;
     console.log('[Engine] Conductor stopped.');
   },
-
   setPlayer: (id, newPlayer) => {
-    if (!(newPlayer instanceof Player)) {
-      throw new Error('setPlayer expects an instance of Player.');
-    }
+    if (!(newPlayer instanceof Player)) throw new Error('setPlayer expects an instance of Player.');
     const oldPlayer = activePlayers.get(id);
     if (oldPlayer) {
       oldPlayer.fadeStartTime = globalThis.CHRONOS;
-      oldPlayer.targetVolume = 0;
       fadingOutPlayers.set(id, oldPlayer);
     }
     newPlayer.setCrossfadeVolume(1);
     activePlayers.set(id, newPlayer);
   },
-
   removePlayer: (id) => {
     const playerToRemove = activePlayers.get(id);
     if (playerToRemove) {
       playerToRemove.fadeStartTime = globalThis.CHRONOS;
-      playerToRemove.targetVolume = 0;
       fadingOutPlayers.set(id, playerToRemove);
       activePlayers.delete(id);
     }
   },
-
   clearPlayers: () => {
     activePlayers.clear();
     fadingOutPlayers.clear();
   },
-
   status: () => ({
     running: isRunning,
     chronos: globalThis.CHRONOS,

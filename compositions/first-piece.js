@@ -1,33 +1,30 @@
 // compositions/first-piece.js
 // ============================================================================
-// An FM Vortex composition to test the JIT compiler's additive and
-// frequency modulation capabilities with stateful phase continuity.
+// A stereo composition to test the N-Dimensional (Stride-2) audio engine.
 // ============================================================================
 
 const kanon = require('../src/index');
+const { t, sin, mul, add } = kanon; // Symbolic helpers
 
-// Import symbolic helpers directly from kanon for cleaner syntax.
-const { t, mul, sin, add } = kanon;
+// --- Stereo Binaural Beat Recipe ---
+// This recipe returns an array of two ASTs, one for each channel (Left, Right).
+// The JIT compiler will process this into a single stateful player that
+// returns a vector `[L, R]` on each tick.
+const binauralBeat = t => [
+  // Left Channel: A pure sine wave at 440Hz
+  sin(mul(t, 440)),
+  
+  // Right Channel: A pure sine wave at 445Hz
+  // The slight detuning will create a psychoacoustic "beating" effect.
+  sin(mul(t, 445))
+];
+kanon('binaural-beat', binauralBeat);
 
-// --- FM Vortex Recipe ---
-// This recipe demonstrates phase modulation (FM synthesis).
-// Carrier: 220Hz
-// Modulator: sin(t * 440 * 2 * PI) * 5 (i.e., a sine wave with amplitude 5,
-//                                     modulating the carrier's phase).
-// The JIT compiler should recognize two distinct oscillators and allocate
-// separate, stable phase slots for them in globalThis.STATE_ARRAY.
-const fmVortex = t => sin(add(mul(t, 220), mul(sin(mul(t, 440)), 5)));
-
-// --- Additive Synthesis Recipe ---
-// This recipe demonstrates simple additive synthesis.
-// Two sine waves are added together.
-const additiveSynth = t => add(sin(mul(t, 110)), sin(mul(t, 330)));
+// --- Mono Recipe (for Auto-Upmix Test) ---
+// This mono recipe should be automatically duplicated to both channels by the compiler.
+const monoTone = t => sin(mul(t, 220));
+kanon('mono-tone', monoTone);
 
 
-// Register both recipes. The JIT compiler will attempt to optimize them.
-kanon('fm-vortex', fmVortex);
-kanon('additive-synth', additiveSynth);
-
-console.log("Registered 'fm-vortex' (should be JIT-compiled for FM) and 'additive-synth' (should be JIT-compiled for additive).");
-console.log("You should hear a rich, complex tone, potentially with modulation.");
-console.log("Try editing these recipes while running to test phase-continuous hot-reloading.");
+console.log("Registered 'binaural-beat' (stereo) and 'mono-tone' (auto-upmixed).");
+console.log("You should hear a complex tone with a beating effect, with the mono tone centered.");
