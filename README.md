@@ -258,6 +258,15 @@ See [DOCS/BEYOND-LISP.md](DOCS/BEYOND-LISP.md) for philosophical comparison.
 - Web-native deployment
 - NPM ecosystem access
 
+### vs. Modular Synthesizers (The Philosophical Ancestor)
+
+The `f(state)` paradigm is the software embodiment of hardware modular synthesis (e.g., Eurorack).
+
+- **A Modular Patch is a Stateful System**: The state is physical—voltages held in capacitors, the position of knobs, the flow of current. The system is always "on."
+- **Turning a Knob is Live Surgery**: When you patch a cable or turn a knob, you are altering a parameter within a continuously running process. You don't "restart" the sound; you guide its flow.
+
+Flux models this behavior directly in code. The `FLUX_STATE` buffer is the rack's power supply and memory. Your `signals.js` file is the patch itself. Editing a parameter is the digital equivalent of turning a knob on a living instrument.
+
 ## Documentation
 
 - **[SURGERY_GUIDE.md](DOCS/SURGERY_GUIDE.md)** - Live coding workflow and best practices
@@ -275,13 +284,6 @@ See [DOCS/BEYOND-LISP.md](DOCS/BEYOND-LISP.md) for philosophical comparison.
 - [ ] JACK FFI transport (PULL mode, <10ms latency)
 - [ ] 3D oscilloscope integration (STRIDE=4: XYZW)
 - [ ] Vim eval integration (select → send → eval)
-
-## Philosophy
-
-> **Kanon without Flux is mathematics without music.**
-> **Flux without Kanon is sound without soul.**
-
-Flux is where the eternal ratios of Kanon (φ, 3:2, perfect fifths) are thrown into the fire of Heraclitean flow and become **living experience**.
 
 ## Credits
 
