@@ -5,7 +5,10 @@
 // Hot-reload compatible: Uses globalThis.FLUX_STATE for phase continuity
 // ============================================================================
 
-import { flux } from './flux.js';
+import { flux, clear } from './flux.js';
+
+// Clear old signals on hot-reload (fixes commented-out signals continuing to play)
+clear();
 
 // ============================================================================
 // EXAMPLE 1: Breathing Sine (Simple amplitude modulation)
@@ -47,41 +50,123 @@ import { flux } from './flux.js';
 // An organic, growling cello-like tone that continuously evolves
 // Uses phase modulation for complex, non-linear harmonics
 
-flux('vortex-morph', (mem, idx) => {
-  // --- SURGERY PARAMS (change these live!) ---
-  const baseFreq = 432.0;    // Deep G2 note
-  // const modRatio = 1.618;    // Golden Ratio (non-harmonic shimmer)
-  const modRatio = 1.1;    // Golden Ratio (non-harmonic shimmer)
-  const morphSpeed = 0.1;    // How fast the "vortex" breathes (Hz)
-  const intensity = 7.0;     // Modulation depth (try 50.0 for chaos!)
 
-  return {
-    update: (sr) => {
-      // 1. Accumulate three phases
-      let p1 = mem[idx];     // Carrier Phase
-      let p2 = mem[idx + 1]; // Modulator Phase
-      let t  = mem[idx + 2]; // Global LFO for morphing
 
-      p1 = (p1 + baseFreq / sr) % 1.0;
-      p2 = (p2 + (baseFreq * modRatio) / sr) % 1.0;
-      t  = (t + morphSpeed / sr) % 1.0;
 
-      mem[idx] = p1;
-      mem[idx + 1] = p2;
-      mem[idx + 2] = t;
 
-      // 2. The Functional Surgery
-      // Use the second osc to warp the time-space of the first osc
-      const depthLFO = Math.sin(t * 2 * Math.PI) * intensity;
-      const modulator = Math.sin(p2 * 2 * Math.PI) * depthLFO;
 
-      const sample = Math.sin(p1 * 2 * Math.PI + modulator);
 
-      // Return as a mono-vector (STRIDE 1)
-      return [sample * 0.5];
-    }
-  };
-});
+
+// flux('vortex-morph474', (mem, idx) => {
+//   // --- SURGERY PARAMS (change these live!) ---
+//   const baseFreq = 222.0;    // Deep G2 note
+//   // const modRatio = 1.618;    // Golden Ratio (non-harmonic shimmer)
+//   const modRatio = 1.1;    // Golden Ratio (non-harmonic shimmer)
+//   const morphSpeed = 0.1;    // How fast the "vortex" breathes (Hz)
+//   const intensity = 7.0;     // Modulation depth (try 50.0 for chaos!)
+
+//   return {
+//     update: (sr) => {
+//       // 1. Accumulate three phases
+//       let p1 = mem[idx];     // Carrier Phase
+//       let p2 = mem[idx + 1]; // Modulator Phase
+//       let t  = mem[idx + 2]; // Global LFO for morphing
+
+//       p1 = (p1 + baseFreq / sr) % 1.0;
+//       p2 = (p2 + (baseFreq * modRatio) / sr) % 1.0;
+//       t  = (t + morphSpeed / sr) % 1.0;
+
+//       mem[idx] = p1;
+//       mem[idx + 1] = p2;
+//       mem[idx + 2] = t;
+
+//       // 2. The Functional Surgery
+//       // Use the second osc to warp the time-space of the first osc
+//       const depthLFO = Math.sin(t * 2 * Math.PI) * intensity;
+//       const modulator = Math.sin(p2 * 2 * Math.PI) * depthLFO;
+
+//       const sample = Math.sin(p1 * 2 * Math.PI + modulator);
+
+//       // Return as a mono-vector (STRIDE 1)
+//       return [sample * 0.5];
+//     }
+//   };
+// });
+
+
+
+// flux('vortex-333', (mem, idx) => {
+//   // --- SURGERY PARAMS (change these live!) ---
+//   const baseFreq = 444.0;    // Deep G2 note
+//   // const modRatio = 1.618;    // Golden Ratio (non-harmonic shimmer)
+//   const modRatio = 1.1;    // Golden Ratio (non-harmonic shimmer)
+//   const morphSpeed = 0.1;    // How fast the "vortex" breathes (Hz)
+//   const intensity = 7.0;     // Modulation depth (try 50.0 for chaos!)
+
+//   return {
+//     update: (sr) => {
+//       // 1. Accumulate three phases
+//       let p1 = mem[idx];     // Carrier Phase
+//       let p2 = mem[idx + 1]; // Modulator Phase
+//       let t  = mem[idx + 2]; // Global LFO for morphing
+
+//       p1 = (p1 + baseFreq / sr) % 1.0;
+//       p2 = (p2 + (baseFreq * modRatio) / sr) % 1.0;
+//       t  = (t + morphSpeed / sr) % 1.0;
+
+//       mem[idx] = p1;
+//       mem[idx + 1] = p2;
+//       mem[idx + 2] = t;
+
+//       // 2. The Functional Surgery
+//       // Use the second osc to warp the time-space of the first osc
+//       const depthLFO = Math.sin(t * 2 * Math.PI) * intensity;
+//       const modulator = Math.sin(p2 * 2 * Math.PI) * depthLFO;
+
+//       const sample = Math.sin(p1 * 2 * Math.PI + modulator);
+
+//       // Return as a mono-vector (STRIDE 1)
+//       return [sample * 0.5];
+//     }
+//   };
+// });
+
+// flux('vortex-444', (mem, idx) => {
+//   // --- SURGERY PARAMS (change these live!) ---
+//   const baseFreq = 555.0;    // Deep G2 note
+//   // const modRatio = 1.618;    // Golden Ratio (non-harmonic shimmer)
+//   const modRatio = 1.1;    // Golden Ratio (non-harmonic shimmer)
+//   const morphSpeed = 0.1;    // How fast the "vortex" breathes (Hz)
+//   const intensity = 7.0;     // Modulation depth (try 50.0 for chaos!)
+
+//   return {
+//     update: (sr) => {
+//       // 1. Accumulate three phases
+//       let p1 = mem[idx];     // Carrier Phase
+//       let p2 = mem[idx + 1]; // Modulator Phase
+//       let t  = mem[idx + 2]; // Global LFO for morphing
+
+//       p1 = (p1 + baseFreq / sr) % 1.0;
+//       p2 = (p2 + (baseFreq * modRatio) / sr) % 1.0;
+//       t  = (t + morphSpeed / sr) % 1.0;
+
+//       mem[idx] = p1;
+//       mem[idx + 1] = p2;
+//       mem[idx + 2] = t;
+
+//       // 2. The Functional Surgery
+//       // Use the second osc to warp the time-space of the first osc
+//       const depthLFO = Math.sin(t * 2 * Math.PI) * intensity;
+//       const modulator = Math.sin(p2 * 2 * Math.PI) * depthLFO;
+
+//       const sample = Math.sin(p1 * 2 * Math.PI + modulator);
+
+//       // Return as a mono-vector (STRIDE 1)
+//       return [sample * 0.5];
+//     }
+//   };
+// });
+
 
 // ============================================================================
 // EXAMPLE 3: Van der Pol Oscillator (Functional Style)
