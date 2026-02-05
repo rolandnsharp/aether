@@ -4,15 +4,64 @@
 
 ## Table of Contents
 
-1. [Current Performance Profile](#current-performance-profile)
-2. [Quick Wins](#quick-wins)
-3. [Lookup Tables](#lookup-tables)
-4. [Pre-Computation Strategies](#pre-computation-strategies)
-5. [Buffer Optimization](#buffer-optimization)
-6. [High-Fidelity Audio](#high-fidelity-audio)
-7. [Monitoring & Benchmarking](#monitoring--benchmarking)
-8. [Performance Tiers](#performance-tiers)
-9. [Complete Examples](#complete-examples)
+1. [Hardware Considerations](#hardware-considerations)
+2. [Current Performance Profile](#current-performance-profile)
+3. [Quick Wins](#quick-wins)
+4. [Lookup Tables](#lookup-tables)
+5. [Pre-Computation Strategies](#pre-computation-strategies)
+6. [Buffer Optimization](#buffer-optimization)
+7. [High-Fidelity Audio](#high-fidelity-audio)
+8. [Monitoring & Benchmarking](#monitoring--benchmarking)
+9. [Performance Tiers](#performance-tiers)
+10. [Complete Examples](#complete-examples)
+
+---
+
+## Hardware Considerations
+
+### Clock Speed (Single Core): The "God-Tier" Stat
+
+**A 5.0GHz single core will always be "smoother" for a single complex vortex-morph than ten 2.0GHz cores.**
+
+Why? **Audio is linear; the next sample depends on the last.**
+
+```javascript
+// Sample N+1 MUST wait for sample N to complete
+mem[idx] = (mem[idx] + phaseInc) % 1.0;  // Read previous state
+const sample = Math.sin(mem[idx] * TAU);  // Generate next sample
+```
+
+Audio synthesis is inherently **sequential**. You cannot parallelize phase accumulation across cores because each sample depends on the previous state.
+
+### What Matters for Audio Performance
+
+| Factor | Impact | Why |
+|--------|--------|-----|
+| **Single-Core Clock Speed** | ⭐⭐⭐⭐⭐ Critical | 48k sequential ops/second |
+| **L1/L2 Cache** | ⭐⭐⭐⭐ High | State buffer must stay in cache |
+| **RT Kernel** | ⭐⭐⭐⭐ High | Eliminates jitter/dropouts (see [REALTIME_KERNEL.md](REALTIME_KERNEL.md)) |
+| **RAM Speed** | ⭐⭐ Low | Audio buffers fit in cache |
+| **Core Count** | ⭐ Minimal | Audio is single-threaded |
+| **GPU** | - None | Not used for synthesis |
+
+### CPU Recommendations
+
+| CPU | Cores | Clock | Audio Rating | Notes |
+|-----|-------|-------|--------------|-------|
+| i9-13900K | 24 | 5.8GHz | ⭐⭐⭐⭐⭐ | Best for audio |
+| Ryzen 9 7950X | 16 | 5.7GHz | ⭐⭐⭐⭐⭐ | Excellent |
+| M2 Max | 12 | 3.7GHz | ⭐⭐⭐⭐ | Good (very efficient) |
+| i5-11400 | 6 | 4.4GHz | ⭐⭐⭐ | Decent for solo |
+| Old Xeon | 32 | 2.0GHz | ⭐⭐ | Many cores won't help |
+
+**Rule of Thumb**: For audio, prefer 1 fast core over 10 slow cores.
+
+### The "Free Upgrade" Path
+
+Before buying new hardware:
+1. **RT Kernel** (free, ~2x latency improvement) - See [REALTIME_KERNEL.md](REALTIME_KERNEL.md)
+2. **Optimize Code** (free, 5-20x speedup) - This document
+3. **Upgrade CPU** ($$, linear clock speed gains)
 
 ---
 
