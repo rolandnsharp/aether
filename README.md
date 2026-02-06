@@ -13,14 +13,22 @@ When you edit parameters, the signal morphs seamlessly because its state persist
 ## Quick Start
 
 ```bash
-# Install dependencies
+# 1. Install dependencies
 bun install
 
-# Start the engine (with hot-reload)
-bun --hot index.js
+# 2. Link the 'kanon' command globally (one-time setup)
+bun link
 
-# Edit live-session.js while running for live surgery!
+# 3. Start the live sound surgery engine
+kanon
+
+# Alternative: Use bun scripts instead
+bun start
+
+# 4. Edit live-session.js while running for instant hot-reload!
 ```
+
+The `kanon` command starts the engine with hot-reload enabled. Edit `live-session.js`, save, and hear your changes instantly with zero phase resets.
 
 ## Architecture
 

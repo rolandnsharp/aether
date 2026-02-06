@@ -2,6 +2,13 @@
   "name": "kanon",
   "module": "index.js",
   "type": "module",
+  "bin": {
+    "kanon": "./src/start.js"
+  },
+  "scripts": {
+    "start": "bun --hot index.js",
+    "dev": "bun --hot index.js"
+  },
   "devDependencies": {
     "@types/bun": "^1.3.6"
   },
