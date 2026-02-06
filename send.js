@@ -33,9 +33,13 @@ const originalLength = code.length;
 code = code.replace(/import.*from '.*';/g, '');
 console.log(`Removed ${originalLength - code.length} bytes of import statements.`);
 
+// Prepend a clear() call to ensure old signals are removed
+const finalCode = `clear();\n${code}`;
+console.log('Prepended clear() command for a clean state replacement.');
+
 // Create a UDP client and send the code
 const client = dgram.createSocket('udp4');
-client.send(Buffer.from(code), PORT, HOST, (err) => {
+client.send(Buffer.from(finalCode), PORT, HOST, (err) => {
   if (err) {
     console.error('Error sending message:', err);
     client.close();

@@ -12,27 +12,27 @@ import { pipe, sin, saw, tri, square, lfo, gain, pan, stereo, mix, am, softClip,
 // MANUAL API TEST - Basic sine for testing hot-reload
 // ============================================================================
 
-  kanon('basic-sines3', (state, idx) => {
-    // GC OPTIMIZATION: Create the output vector once and reuse it.
-    const reusableVector = new Float64Array(1);
-    const freq = 343;
+  // kanon('basic-sines3', (state, idx) => {
+  //   // GC OPTIMIZATION: Create the output vector once and reuse it.
+  //   const reusableVector = new Float64Array(1);
+  //   const freq = 444;
 
-    console.log(`[REGISTER] freq=${freq}Hz, idx=${idx}`);
+  //   console.log(`[REGISTER] freq=${freq}Hz, idx=${idx}`);
 
-    return {
-      update: (sr) => {
-        state[idx] = ((state[idx] || 0) + freq / sr) % 1.0;
+  //   return {
+  //     update: (sr) => {
+  //       state[idx] = ((state[idx] || 0) + freq / sr) % 1.0;
 
-        // Log occasionally
-        if (Math.random() < 0.0001) {
-          console.log(`[UPDATE] phase=${state[idx].toFixed(3)}`);
-        }
+  //       // Log occasionally
+  //       if (Math.random() < 0.0001) {
+  //         console.log(`[UPDATE] phase=${state[idx].toFixed(3)}`);
+  //       }
 
-        reusableVector[0] = Math.sin(state[idx] * 2 * Math.PI) * 0.3;
-        return reusableVector;
-      }
-    };
-  });
+  //       reusableVector[0] = Math.sin(state[idx] * 2 * Math.PI) * 0.3;
+  //       return reusableVector;
+  //     }
+  //   };
+  // });
 
 
 
@@ -81,11 +81,11 @@ import { pipe, sin, saw, tri, square, lfo, gain, pan, stereo, mix, am, softClip,
 
 // kanon('vortex-morph474', (mem, idx) => {
 //   // --- SURGERY PARAMS (change these live!) ---
-//   const baseFreq = 111.0;    // Deep G2 note
-//   const modRatio = 1.618;    // Golden Ratio (non-harmonic shimmer)
-//   // const modRatio = 1.1;    // Golden Ratio (non-harmonic shimmer)
-//   const morphSpeed = 0.1;    // How fast the "vortex" breathes (Hz)
-//   const intensity = 7.0;     // Modulation depth (try 50.0 for chaos!)
+//   const baseFreq = 122.0;    // Deep G2 note
+//   // const modRatio = 1.618;    // Golden Ratio (non-harmonic shimmer)
+//   const modRatio = 1.1;    // Golden Ratio (non-harmonic shimmer)
+//   const morphSpeed = 2;    // How fast the "vortex" breathes (Hz)
+//   const intensity = 4.0;     // Modulation depth (try 50.0 for chaos!)
 
 //   return {
 //     update: (sr) => {
@@ -328,14 +328,14 @@ import { pipe, sin, saw, tri, square, lfo, gain, pan, stereo, mix, am, softClip,
 // ));
 
 // EXAMPLE 6: Mixed waveforms
-// kanon('mixed-waves', pipe(
-//   mix(
-//     pipe(sin(220), gain(0.3)),    // A3 sine
-//     pipe(saw(330), gain(0.2)),    // E4 sawtooth
-//     pipe(tri(440), gain(0.2))     // A4 triangle
-//   ),
-//   softClip()          // Soft clipping prevents distortion
-// ));
+kanon('mixed-waves', pipe(
+  mix(
+    pipe(sin(220), gain(0.3)),    // A3 sine
+    pipe(saw(330), gain(0.2)),    // E4 sawtooth
+    pipe(tri(440), gain(0.2))     // A4 triangle
+  ),
+  softClip()          // Soft clipping prevents distortion
+));
 
 // EXAMPLE 7: Amplitude modulation (tremolo)
 // kanon('tremolo', pipe(

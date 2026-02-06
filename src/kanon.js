@@ -17,6 +17,9 @@ const stateMemory = globalThis.KANON_STATE;
 globalThis.KANON_REGISTRY ??= new Map();
 const registry = globalThis.KANON_REGISTRY;
 
+// GC OPTIMIZATION: Reusable vector to avoid allocations in the hot path
+const reusableVector = new Float64Array(STRIDE);
+
 // ============================================================================
 // Core API
 // ============================================================================
@@ -46,24 +49,23 @@ export function kanon(id, factory) {
  * @returns {Array<number>} - Mixed vector [ch0, ch1, ...] clipped with tanh
  */
 export function updateAll(sampleRate) {
-  const mixedVector = new Float64Array(STRIDE);
+  // Reset the reusable vector
+  reusableVector.fill(0);
 
   // Mix all signals
-  let signalCount = 0;
   for (const signal of registry.values()) {
     const vector = signal.update(sampleRate);
     for (let i = 0; i < STRIDE; i++) {
-      mixedVector[i] += vector[i] || 0;
+      reusableVector[i] += vector[i] || 0;
     }
-    signalCount++;
   }
 
   // Soft-clip every channel for safety and warmth
   for (let i = 0; i < STRIDE; i++) {
-    mixedVector[i] = Math.tanh(mixedVector[i]);
+    reusableVector[i] = Math.tanh(reusableVector[i]);
   }
 
-  return Array.from(mixedVector);
+  return reusableVector;
 }
 
 /**
