@@ -12,7 +12,7 @@ import { createTransport } from './transport.js';
 // ============================================================================
 
 // 48kHz - Pro audio standard, 9% higher resolution than CD quality
-const SAMPLE_RATE = 48000;
+export const SAMPLE_RATE = 48000;
 
 // ============================================================================
 // Engine State

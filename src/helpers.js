@@ -19,45 +19,60 @@ export const compose = (...fns) => pipe(...fns.reverse());
 // ============================================================================
 
 // Sine wave oscillator
-export const sin = (freq) => (state, idx) => ({
-  update: (sr) => {
-    state[idx] = ((state[idx] || 0) + freq / sr) % 1.0;
-    return [Math.sin(state[idx] * 2 * Math.PI)];
-  }
-});
+export const sin = (freq) => (state, idx, sampleRate) => {
+  const phaseIncrement = freq / sampleRate; // Pre-compute phase increment
+  return {
+    update: () => {
+      state[idx] = ((state[idx] || 0) + phaseIncrement) % 1.0;
+      return [Math.sin(state[idx] * 2 * Math.PI)];
+    }
+  };
+};
 
 // Sawtooth wave oscillator
-export const saw = (freq) => (state, idx) => ({
-  update: (sr) => {
-    state[idx] = ((state[idx] || 0) + freq / sr) % 1.0;
-    return [state[idx] * 2 - 1]; // Range: -1 to 1
-  }
-});
+export const saw = (freq) => (state, idx, sampleRate) => {
+  const phaseIncrement = freq / sampleRate; // Pre-compute phase increment
+  return {
+    update: () => {
+      state[idx] = ((state[idx] || 0) + phaseIncrement) % 1.0;
+      return [state[idx] * 2 - 1]; // Range: -1 to 1
+    }
+  };
+};
 
 // Square wave oscillator
-export const square = (freq) => (state, idx) => ({
-  update: (sr) => {
-    state[idx] = ((state[idx] || 0) + freq / sr) % 1.0;
-    return [state[idx] < 0.5 ? -1 : 1];
-  }
-});
+export const square = (freq) => (state, idx, sampleRate) => {
+  const phaseIncrement = freq / sampleRate; // Pre-compute phase increment
+  return {
+    update: () => {
+      state[idx] = ((state[idx] || 0) + phaseIncrement) % 1.0;
+      return [state[idx] < 0.5 ? -1 : 1];
+    }
+  };
+};
 
 // Triangle wave oscillator
-export const tri = (freq) => (state, idx) => ({
-  update: (sr) => {
-    state[idx] = ((state[idx] || 0) + freq / sr) % 1.0;
-    const phase = state[idx];
-    return [phase < 0.5 ? phase * 4 - 1 : 3 - phase * 4];
-  }
-});
+export const tri = (freq) => (state, idx, sampleRate) => {
+  const phaseIncrement = freq / sampleRate; // Pre-compute phase increment
+  return {
+    update: () => {
+      state[idx] = ((state[idx] || 0) + phaseIncrement) % 1.0;
+      const phase = state[idx];
+      return [phase < 0.5 ? phase * 4 - 1 : 3 - phase * 4];
+    }
+  };
+};
 
 // Low-frequency oscillator (returns unipolar 0-1)
-export const lfo = (freq) => (state, idx) => ({
-  update: (sr) => {
-    state[idx] = ((state[idx] || 0) + freq / sr) % 1.0;
-    return [(Math.sin(state[idx] * 2 * Math.PI) + 1) * 0.5];
-  }
-});
+export const lfo = (freq) => (state, idx, sampleRate) => {
+  const phaseIncrement = freq / sampleRate; // Pre-compute phase increment
+  return {
+    update: () => {
+      state[idx] = ((state[idx] || 0) + phaseIncrement) % 1.0;
+      return [(Math.sin(state[idx] * 2 * Math.PI) + 1) * 0.5];
+    }
+  };
+};
 
 // ============================================================================
 // SIGNAL PROCESSORS (Stateless - dimension-agnostic)
@@ -67,7 +82,7 @@ export const lfo = (freq) => (state, idx) => ({
 export const gain = (amount) => (upstream) => (state, idx) => {
   const up = upstream(state, idx);
   return {
-    update: (sr) => up.update(sr).map(s => s * amount)
+    update: () => up.update().map(s => s * amount)
   };
 };
 
@@ -75,7 +90,7 @@ export const gain = (amount) => (upstream) => (state, idx) => {
 export const offset = (amount) => (upstream) => (state, idx) => {
   const up = upstream(state, idx);
   return {
-    update: (sr) => up.update(sr).map(s => s + amount)
+    update: () => up.update().map(s => s + amount)
   };
 };
 
@@ -83,7 +98,7 @@ export const offset = (amount) => (upstream) => (state, idx) => {
 export const clip = () => (upstream) => (state, idx) => {
   const up = upstream(state, idx);
   return {
-    update: (sr) => up.update(sr).map(s => Math.max(-1, Math.min(1, s)))
+    update: () => up.update().map(s => Math.max(-1, Math.min(1, s)))
   };
 };
 
@@ -91,7 +106,7 @@ export const clip = () => (upstream) => (state, idx) => {
 export const softClip = () => (upstream) => (state, idx) => {
   const up = upstream(state, idx);
   return {
-    update: (sr) => up.update(sr).map(s => Math.tanh(s))
+    update: () => up.update().map(s => Math.tanh(s))
   };
 };
 
@@ -105,8 +120,8 @@ export const mix = (...signals) => (state, idx) => {
   const sources = signals.map((sig, i) => sig(state, idx + i));
 
   return {
-    update: (sr) => {
-      const outputs = sources.map(src => src.update(sr));
+    update: () => {
+      const outputs = sources.map(src => src.update());
       const maxLen = Math.max(...outputs.map(o => o.length));
 
       // Sum all signals
@@ -130,8 +145,8 @@ export const add = (signalA, signalB) => mix(signalA, signalB);
 export const pan = (panPos) => (upstream) => (state, idx) => {
   const up = upstream(state, idx);
   return {
-    update: (sr) => {
-      const [mono] = up.update(sr);
+    update: () => {
+      const [mono] = up.update();
       const left = mono * Math.cos(panPos * Math.PI * 0.5);
       const right = mono * Math.sin(panPos * Math.PI * 0.5);
       return [left, right];
@@ -145,9 +160,9 @@ export const stereo = (leftSig, rightSig) => (state, idx) => {
   const right = rightSig(state, idx + 1);
 
   return {
-    update: (sr) => {
-      const l = left.update(sr)[0];
-      const r = right.update(sr)[0];
+    update: () => {
+      const l = left.update()[0];
+      const r = right.update()[0];
       return [l, r];
     }
   };
@@ -157,8 +172,8 @@ export const stereo = (leftSig, rightSig) => (state, idx) => {
 export const mono = () => (upstream) => (state, idx) => {
   const up = upstream(state, idx);
   return {
-    update: (sr) => {
-      const signal = up.update(sr);
+    update: () => {
+      const signal = up.update();
       if (signal.length === 1) return signal; // Already mono
       // Average all channels
       const sum = signal.reduce((acc, s) => acc + s, 0);
@@ -171,8 +186,8 @@ export const mono = () => (upstream) => (state, idx) => {
 export const spread = () => (upstream) => (state, idx) => {
   const up = upstream(state, idx);
   return {
-    update: (sr) => {
-      const [mono] = up.update(sr);
+    update: () => {
+      const [mono] = up.update();
       return [mono, mono];
     }
   };
@@ -188,9 +203,9 @@ export const am = (modulator) => (carrier) => (state, idx) => {
   const car = carrier(state, idx + 1);
 
   return {
-    update: (sr) => {
-      const modSignal = mod.update(sr)[0];
-      const carSignal = car.update(sr);
+    update: () => {
+      const modSignal = mod.update()[0];
+      const carSignal = car.update();
       return carSignal.map(s => s * modSignal);
     }
   };
@@ -202,14 +217,14 @@ export const am = (modulator) => (carrier) => (state, idx) => {
 
 // Simple delay (feedback echo)
 // delayTime in seconds, feedbackAmt 0-1 (how much signal feeds back)
-export const feedback = (delayTime, feedbackAmt, sampleRate = 48000) => (upstream) => (state, idx) => {
-  const up = upstream(state, idx);
+export const feedback = (delayTime, feedbackAmt) => (upstream) => (state, idx, sampleRate) => {
+  const up = upstream(state, idx, sampleRate);
   const bufferSize = Math.ceil(delayTime * sampleRate);
   const stateOffset = idx + 1; // Reserve idx for write position
 
   return {
-    update: (sr) => {
-      const input = up.update(sr);
+    update: () => {
+      const input = up.update();
       const writePos = (state[idx] || 0) % bufferSize;
 
       return input.map((sample, ch) => {

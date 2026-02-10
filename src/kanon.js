@@ -4,6 +4,7 @@
 // ============================================================================
 
 import { STRIDE } from './storage.js';
+import { SAMPLE_RATE } from './engine.js'; // Import SAMPLE_RATE
 
 // ============================================================================
 // State Memory (Survives hot-reloads)
@@ -27,7 +28,7 @@ const reusableVector = new Float64Array(STRIDE);
 /**
  * Register a signal for live surgery
  * @param {string} id - Unique identifier for this signal
- * @param {Function} factory - (state, idx) => { update: (sr) => [samples...] }
+ * @param {Function} factory - (state, idx, sampleRate) => { update: () => [samples...] }
  * @returns {Object} - Signal object with update method
  */
 export function kanon(id, factory) {
@@ -35,7 +36,7 @@ export function kanon(id, factory) {
   const idx = [...id].reduce((acc, char) => acc + char.charCodeAt(0), 0) % 512;
 
   // Create the closure logic
-  const signal = factory(stateMemory, idx);
+  const signal = factory(stateMemory, idx, SAMPLE_RATE);
 
   // Register/Overwrite (The Surgery)
   registry.set(id, signal);
@@ -54,7 +55,7 @@ export function updateAll(sampleRate) {
 
   // Mix all signals
   for (const signal of registry.values()) {
-    const vector = signal.update(sampleRate);
+    const vector = signal.update();
     for (let i = 0; i < STRIDE; i++) {
       reusableVector[i] += vector[i] || 0;
     }

@@ -10,26 +10,30 @@ A state-driven live-coding environment for sound synthesis inspired by the Pytha
 
 When you edit parameters, the signal morphs seamlessly because its state persists across code changes. The monochord's string continues vibrating; only the tension changes.
 
+The engine's design has evolved to support a hierarchy of increasingly abstract and organic synthesis models. **See [docs/SYNTHESIS_MODELS.md](docs/SYNTHESIS_MODELS.md) for the full design philosophy.**
+
 ## Quick Start
 
 ```bash
 # 1. Install dependencies
 bun install
 
-# 2. Link the 'kanon' command globally (one-time setup)
+# 2. Link commands globally (one-time setup)
 bun link
 
-# 3. Start the live sound surgery engine
+# 3. Start the live sound surgery server in a terminal
 kanon                    # Loads live-session.js (default)
 kanon my-session.js      # Load a custom session file
 
-# Alternative: Use bun scripts instead
-bun start
+# 4. In a separate terminal, send commands or start a REPL
+kanon-client send my-session.js  # Send a whole file
+kanon-client repl                # Start an interactive REPL
 
-# 4. Edit your session file while running for instant hot-reload!
+# The traditional hot-reload method still works too:
+bun --hot src/index.js
 ```
 
-The `kanon` command starts the engine with hot-reload enabled. Edit your session file, save, and hear your changes instantly with zero phase resets.
+The `kanon` command starts the server. You can then interact with it using `kanon-client` for surgical code injection, or rely on Bun's hot-reloading by editing your session file.
 
 ## Architecture
 
@@ -176,24 +180,49 @@ kanon('van-der-pol', (mem, idx) => {
 });
 ```
 
-## Live Surgery Workflow
+## Live Surgery Workflows
 
-1. **Start Kanon**: `bun --hot index.js`
-2. **Open** `live-session.js` in your editor
-3. **Edit** a parameter (e.g., `intensity = 6.0` → `intensity = 12.0`)
-4. **Save** (`:w` in Vim)
-5. **Hear it morph instantly** with zero discontinuity
+Kanon supports two primary workflows for live code manipulation. Both achieve the same goal: modifying sound without resetting phase.
+
+### Method 1: Interactive REPL (Recommended)
+
+This method uses the `kanon-client` to send small, surgical code snippets to the running server. It is precise and ideal for performance.
+
+1.  **Start Server**: In one terminal, run `kanon`.
+2.  **Start REPL**: In a second terminal, run `kanon-client repl`.
+3.  **Evaluate Code**: Type JavaScript code into the REPL and press Enter.
+
+```
+kanon> kanon('noise', () => ({ update: () => [Math.random() * 0.1] }))
+Sent successfully.
+kanon> remove('carrier') // Remove a previously defined signal
+Sent successfully.
+kanon> clear() // Clear all signals
+Sent successfully.
+```
+
+You can also send an entire file to be evaluated with `kanon-client send my-session.js`.
+
+### Method 2: File-Based Hot-Reload
+
+This is the classic workflow, powered by Bun's `--hot` flag. It's great for developing larger pieces from a single source file.
+
+1.  **Start Kanon with Hot-Reload**: `bun --hot src/index.js`
+2.  **Open** `live-session.js` in your editor.
+3.  **Edit** a parameter (e.g., `intensity = 6.0` → `intensity = 12.0`).
+4.  **Save** (`:w` in Vim).
+5.  **Hear it morph instantly** with zero discontinuity.
 
 ### Why It Works
 
-When you save `live-session.js`:
-1. Bun reloads the module
-2. The old signal registry is cleared
-3. New `kanon()` calls register fresh closures with updated parameters
-4. **State in `globalThis.KANON_STATE` is untouched**
-5. Signal continues from exact phase position with new math
+When you send code via the REPL or save a file with hot-reload:
+1.  The new code is evaluated (`eval()` for REPL, module reload for `--hot`).
+2.  The old signal registry is modified or cleared.
+3.  New `kanon()` calls register fresh closures with updated parameters.
+4.  **State in `globalThis.KANON_STATE` is untouched.**
+5.  The audio signal continues from its exact phase position, but with new mathematical rules.
 
-This is **phase-continuous hot-swapping** - like adjusting the monochord's string tension while it vibrates.
+This is **phase-continuous hot-swapping** - like adjusting a monochord's string tension while it's still vibrating.
 
 ## State Management
 
