@@ -2,25 +2,46 @@
 // ============================================================================
 // "The Abstract Ideal" - Fire 🔥
 // ============================================================================
-// This paradigm implements a pure function of time f(t), with NO explicit state.
-// It is subject to discontinuities (clicks) on hot-reload.
+// Pure functions of time: f(t) → [samples...]
+// Simple, beautiful, but subject to discontinuities on hot-reload.
+// Perfect for mathematical demonstrations, generative compositions, and
+// use as modulation sources for other paradigms.
 // ============================================================================
 
-// NOTE: This module does NOT manage state or a local registry.
-// Its purpose is solely to register a pure f(t) function with the central engine.
+import { registry } from '../../aether.js';
+import * as helpers from './helpers.js';
 
-// import { registry } from '../../engine.js';
+// ============================================================================
+// Core Registration Function
+// ============================================================================
 
-// /**
-//  * Register a Kanon signal (abstract ideal, pure function of time).
-//  * @param {string} id - Unique identifier for this signal.
-//  * @param {Function} ft_function - (t) => [samples...] - A pure function of time.
-//  * @returns {Object} - A representation of the registered Kanon function.
-//  */
-// export function kanon(id, ft_function) {
-//   // Register the function with a type tag
-//   registry.set(id, { type: 'kanon', func: ft_function });
+/**
+ * Register a Kanon signal (pure function of time).
+ * @param {string} id - Unique identifier for this signal.
+ * @param {Function} ft_function - (t) => sample - A pure function of time.
+ * @returns {Object} - The signal object.
+ */
+function register(id, ft_function) {
+  // Wrap f(t) in the standard signal interface
+  // The mixer will pass context with { t, dt, sampleRate }
+  const signal = {
+    update: (context) => {
+      const sample = ft_function(context.t);
+      return [sample]; // Return as mono
+    }
+  };
 
-//   return { id, type: 'kanon' }; // Return a minimal object for consistency
-// }
+  registry.set(id, signal);
+  console.log(`[KANON] Registered signal: "${id}"`);
 
+  return signal;
+}
+
+// ============================================================================
+// Kanon Namespace Export
+// ============================================================================
+
+export const Kanon = {
+  register,
+  ...helpers  // All pure functional utilities
+};

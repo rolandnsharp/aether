@@ -98,9 +98,18 @@ export function list() {
 }
 
 /**
- * Clear all signals
+ * Clear all signals and clean up Zap states
  */
 export function clear() {
-  console.log(`[KANON] Clearing ${registry.size} signals`);
+  console.log(`[AETHER] Clearing ${registry.size} signals`);
   registry.clear();
+
+  // Also clean up stale Zap states (if Zap is being used)
+  if (globalThis.ZAP_STATES) {
+    const zapCount = globalThis.ZAP_STATES.size;
+    if (zapCount > 0) {
+      globalThis.ZAP_STATES.clear();
+      console.log(`[AETHER] Cleared ${zapCount} Zap state(s)`);
+    }
+  }
 }

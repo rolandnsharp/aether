@@ -472,14 +472,333 @@ clear();
 // ============================================================================
 
 // ============================================================================
-// TEST: New Rhythmos Namespace API
+// TEST: Multi-Paradigm API (Earth + Fire)
 // ============================================================================
 
 import { Rhythmos } from './src/arche/rhythmos/index.js';
+import { Kanon } from './src/arche/kanon/index.js';
 
-Rhythmos.register('test-sine',
-  Rhythmos.pipe(
-    Rhythmos.sin(333),
-    Rhythmos.gain(0.3)
-  )
+// Rhythmos (Earth 🌍) - Stateful, explicit, smooth hot-reload
+// Rhythmos.register('rhythmos-sine',
+//   Rhythmos.pipe(
+//     Rhythmos.sin(330),
+//     Rhythmos.gain(0.1)
+//   )
+// );
+
+// Kanon (Fire 🔥) - Pure function of time, mathematical beauty
+// Using pure functional composition utilities
+const sine440 = t => Math.sin(2 * Math.PI * 444 * t);
+const sine660 = t => Math.sin(2 * Math.PI * 777 * t);  // Perfect fifth
+
+// Compose transformations (right-to-left: read bottom-up)
+// Kanon.register('golden-harmony',
+//   Kanon.compose(
+//     Kanon.gain(0.15),      // 3. Finally scale down
+//     Kanon.softClip         // 2. Then soft clip
+//   )(
+//     Kanon.mix(             // 1. Start with mixed sines
+//       Kanon.gain(0.5, sine440),
+//       Kanon.gain(0.3, sine660)
+//     )
+//   )
+// );
+
+// ============================================================================
+// TEST: Zap (⚡) - The Lightning Paradigm
+// ============================================================================
+
+import { Zap } from './src/arche/zap/index.js';
+
+// console.log('⚡ Testing Zap paradigm...');
+
+// // Minimal test
+// const engine = Zap.createEngine({ sampleRate: 48000 });
+// const testSine = s => Math.sin(2 * Math.PI * 440 * s.t);
+// const samples = engine.render(testSine, 100);
+
+// console.log('✅ Zap working:', {
+//   samples: samples.length,
+//   first: samples[0].toFixed(4),
+//   range: {
+//     min: Math.min(...samples).toFixed(4),
+//     max: Math.max(...samples).toFixed(4)
+//   }
+// });
+
+// Manual state management for hot-reload safety
+// Zap.register('zap-harmony', s => {
+//   // Initialize phases (survives hot-reload!)
+//   if (!s.osc1) s.osc1 = 0;
+//   if (!s.osc2) s.osc2 = 0;
+//   if (!s.osc3) s.osc3 = 0;
+
+//   // Accumulate phases
+//   s.osc1 = (s.osc1 + 716 / s.sr) % 1.0;
+//   s.osc2 = (s.osc2 + 111 / s.sr) % 1.0;
+//   s.osc3 = (s.osc3 + 222 / s.sr) % 1.0;
+
+//   // Generate and mix
+//   return (
+//     Math.sin(s.osc1 * 2 * Math.PI) +
+//     Math.sin(s.osc2 * 2 * Math.PI) +
+//     Math.sin(s.osc3 * 2 * Math.PI)
+//   ) * 0.05;
+// });
+
+// ============================================================================
+// UNIVERSAL HELPERS EXAMPLES - Uncomment to hear!
+// ============================================================================
+// These examples show how the SAME helpers work across all five paradigms
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 1: Lowpass Filter on Different Paradigms
+// ----------------------------------------------------------------------------
+
+// 1a. Filter pure time function (Kanon - Fire 🔥)
+// const pureTime = s => Math.sin(2 * Math.PI * 440 * s.t);
+// Zap.register('filtered-kanon', Zap.lowpass(pureTime, 801));
+
+// // 1b. Filter stateful oscillator (Rhythmos - Earth 🌍)
+// const stateful = s => {
+//   if (!s.phase) s.phase = 0;
+//   s.phase = (s.phase + 440 / s.sr) % 1.0;
+//   return s.phase * 2 - 1; // Sawtooth
+// };
+// Zap.register('filtered-rhythmos', Zap.lowpass(stateful, 999));
+
+// // 1c. Filter Karplus-Strong string (Atomos - Air 💨)
+// const pluck = s => {
+//   const period = 109; // ~440 Hz
+//   if (!s.buffer) {
+//     s.buffer = Array.from({ length: period }, () => Math.random() * 2 - 1);
+//   }
+//   const idx = s.idx % period;
+//   const output = s.buffer[idx];
+//   const next = (idx + 1) % period;
+//   s.buffer[idx] = (s.buffer[idx] + s.buffer[next]) * 0.5 * 0.996;
+//   return output;
+// };
+// Zap.register('filtered-atomos', Zap.lowpass(pluck, 222));
+
+// // 1d. Filter Van der Pol oscillator (Physis - Water 💧)
+// const vdp = s => {
+//   if (!s.vdp) s.vdp = { x: 0.1, y: 0.1 };
+//   const dx = s.vdp.y;
+//   const dy = 1.5 * (1 - s.vdp.x * s.vdp.x) * s.vdp.y - s.vdp.x;
+//   s.vdp.x += dx * 0.12;
+//   s.vdp.y += dy * 0.12;
+//   return s.vdp.x;
+// };
+// Zap.register('filtered-physis', Zap.lowpass(vdp, 222));
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 2: Feedback Delay (Echo)
+// ----------------------------------------------------------------------------
+
+// // Echo on pure sine
+// const sine = s => Math.sin(2 * Math.PI * 320 * s.t);
+// const echoed = Zap.feedbackDelay(sine, 0.01, 0.19);
+// Zap.register('echo-sine', Zap.gain(echoed, 0.2));
+
+// // Echo on chaos (Lorenz attractor)
+// const chaos = s => {
+//   if (!s.lorenz) s.lorenz = { x: 0.1, y: 0.1, z: 0.1 };
+//   const dx = 10 * (s.lorenz.y - s.lorenz.x);
+//   const dy = s.lorenz.x * (28 - s.lorenz.z) - s.lorenz.y;
+//   const dz = s.lorenz.x * s.lorenz.y - (8/3) * s.lorenz.z;
+//   s.lorenz.x += dx * 0.005;
+//   s.lorenz.y += dy * 0.005;
+//   s.lorenz.z += dz * 0.005;
+//   return s.lorenz.x;
+// };
+// const echoedChaos = Zap.feedbackDelay(chaos, 0.25, 0.6);
+// Zap.register('echo-chaos', Zap.gain(echoedChaos, 0.25));
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 3: Crossfade Between Paradigms
+// ----------------------------------------------------------------------------
+
+// // Morph from Kanon (pure) to Physis (spring)
+// const kanon = s => Math.sin(2 * Math.PI * 444 * s.t);
+// const spring = s => {
+//   if (!s.spring) s.spring = { position: 0, velocity: 10 };
+//   const force = -100 * s.spring.position - 0.1 * s.spring.velocity;
+//   s.spring.velocity += force * s.dt;
+//   s.spring.position += s.spring.velocity * s.dt;
+//   return s.spring.position;
+// };
+// const morphing = Zap.crossfade(kanon, spring, s => Math.min(1, s.t / 5));
+// Zap.register('morph', Zap.gain(morphing, 0.2));
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 4: Chained Effects (Pipe Pattern)
+// ----------------------------------------------------------------------------
+
+// // Take ANY paradigm and process it
+// const raw = s => {
+//   if (!s.phase) s.phase = 0;
+//   s.phase = (s.phase + 110 / s.sr) % 1.0;
+//   return s.phase * 2 - 1; // Sawtooth
+// };
+
+// const processed = Zap.pipe(
+//   raw,
+//   sig => Zap.lowpass(sig, 800),           // Filter
+//   sig => Zap.feedbackDelay(sig, 0.3, 0.4), // Echo
+//   sig => Zap.tremolo(sig, 3, 0.4),         // Tremolo
+//   sig => Zap.softClip(sig, 1.5),           // Soft distortion
+//   sig => Zap.gain(sig, 0.3)                // Final level
+// );
+// Zap.register('chain', processed);
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 5: Parallel Processing (Multi-band)
+// ----------------------------------------------------------------------------
+
+// Split signal into three bands
+// const source = s => {
+//   if (!s.phase) s.phase = 0;
+//   s.phase = (s.phase + 555 / s.sr) % 1.0;
+//   return s.phase * 2 - 1;
+// };
+
+// const lowBand = Zap.lowpass(source, 400);
+// const midBand = Zap.pipe(
+//   source,
+//   sig => Zap.highpass(sig, 400),
+//   sig => Zap.lowpass(sig, 200)
+// );
+// const highBand = Zap.highpass(source, 200);
+
+// const multiband = Zap.mix(
+//   Zap.gain(lowBand, 1.2),
+//   Zap.gain(midBand, 0.8),
+//   Zap.gain(highBand, 0.4)
+// );
+// Zap.register('multiband', Zap.gain(multiband, 3));
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 6: Modulation Between Paradigms
+// ----------------------------------------------------------------------------
+
+// // Use chaos to modulate crossfade between two oscillators
+// const chaosLFO = s => {
+//   if (!s.lorenz) s.lorenz = { x: 0.1, y: 0.1, z: 0.1 };
+//   const dx = 10 * (s.lorenz.y - s.lorenz.x);
+//   const dy = s.lorenz.x * (28 - s.lorenz.z) - s.lorenz.y;
+//   const dz = s.lorenz.x * s.lorenz.y - (8/3) * s.lorenz.z;
+//   s.lorenz.x += dx * 0.002;
+//   s.lorenz.y += dy * 0.002;
+//   s.lorenz.z += dz * 0.002;
+//   // Map to 0-1 range
+//   return (s.lorenz.x + 15) / 30;
+// };
+
+// const oscA = s => Math.sin(2 * Math.PI * 220 * s.t);
+// const oscB = s => Math.sin(2 * Math.PI * 330 * s.t);
+
+// const chaosModulated = Zap.crossfade(oscA, oscB, chaosLFO);
+// Zap.register('chaos-mod', Zap.gain(chaosModulated, 0.2));
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 7: Tremolo on Everything
+// ----------------------------------------------------------------------------
+
+// // Same tremolo works on all paradigms
+// const kanon = s => Math.sin(2 * Math.PI * 440 * s.t);
+// Zap.register('tremolo-kanon', Zap.tremolo(kanon, 4, 0.5));
+
+// const atomos = s => {
+//   const period = 109;
+//   if (!s.buffer) {
+//     s.buffer = Array.from({ length: period }, () => Math.random() * 2 - 1);
+//   }
+//   const idx = s.idx % period;
+//   const output = s.buffer[idx];
+//   const next = (idx + 1) % period;
+//   s.buffer[idx] = (s.buffer[idx] + s.buffer[next]) * 0.5 * 0.996;
+//   return output;
+// };
+// Zap.register('tremolo-atomos', Zap.tremolo(atomos, 4, 0.5));
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 8: Bitcrusher (Lo-fi)
+// ----------------------------------------------------------------------------
+
+// const clean = s => Math.sin(2 * Math.PI * 330 * s.t);
+// const crushed = Zap.bitcrush(clean, 4, 8); // 4-bit, 8x sample rate reduction
+// Zap.register('lofi', Zap.gain(crushed, 0.3));
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 9: Chorus Effect
+// ----------------------------------------------------------------------------
+
+// const dry = s => {
+//   if (!s.phase) s.phase = 0;
+//   s.phase = (s.phase + 220 / s.sr) % 1.0;
+//   return Math.sin(s.phase * 2 * Math.PI);
+// };
+// const lush = Zap.chorus(dry, 0.5, 0.005, 0.5);
+// Zap.register('chorus', Zap.gain(lush, 0.25));
+
+// ----------------------------------------------------------------------------
+// EXAMPLE 10: All Five Elements Together
+// ----------------------------------------------------------------------------
+
+// 🔥 Kanon (Fire) - Pure mathematical function
+const fire = s => Math.sin(2 * Math.PI * 440 * s.t);
+
+// 🌍 Rhythmos (Earth) - Stateful phase accumulation
+const earth = s => {
+  if (!s.phase) s.phase = 0;
+  s.phase = (s.phase + 330 / s.sr) % 1.0;
+  return Math.sin(s.phase * 2 * Math.PI);
+};
+
+// 💨 Atomos (Air) - Discrete/granular (Karplus-Strong)
+const air = s => {
+  const period = 73;
+  if (!s.buffer) {
+    s.buffer = Array.from({ length: period }, () => Math.random() * 2 - 1);
+  }
+  const idx = s.idx % period;
+  const output = s.buffer[idx];
+  const next = (idx + 1) % period;
+  s.buffer[idx] = (s.buffer[idx] + s.buffer[next]) * 0.5 * 0.997;
+  return output;
+};
+
+// 💧 Physis (Water) - Physics simulation (spring)
+const water = s => {
+  if (!s.spring) s.spring = { position: 0, velocity: 5 };
+  const force = -516 * s.spring.position - 0.05 * s.spring.velocity;
+  s.spring.velocity += force * s.dt;
+  s.spring.position += s.spring.velocity * s.dt;
+  return s.spring.position;
+};
+
+// ✨ Aether (Ether) - Spatial field
+const aether = s => {
+  // Assume listener at (2, 1, 0)
+  const x = 2, y = 1, z = 0;
+  const distance = Math.sqrt(x*x + y*y + z*z);
+  return Math.sin(2 * Math.PI * 220 * s.t) / (distance + 1);
+};
+
+// Apply SAME processing to all five!
+const processElement = (element) => Zap.pipe(
+  element,
+  sig => Zap.lowpass(sig, 1200),
+  sig => Zap.gain(sig, 0.15)
 );
+
+const elements = Zap.mix(
+  // processElement(fire),
+  // processElement(earth),
+  // processElement(air),
+  // processElement(water),
+  // processElement(aether)
+);
+
+Zap.register('five-elements', elements);
