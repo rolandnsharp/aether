@@ -1,16 +1,30 @@
-# Aether - Live Sonic Aether Engine
+# Aether - Multi-Paradigm Live Coding Engine
 
 > *"All things are number."* - Pythagoras
 
-A state-driven live-coding environment for sound synthesis inspired by the Pythagorean monochord. Edit JavaScript, save, and hear changes instantly with **zero phase resets**. True surgical manipulation of living sound.
+A multi-paradigm live-coding environment for sound synthesis. Edit JavaScript, save, and hear changes instantly with **zero phase resets**. True surgical manipulation of living sound across five fundamental synthesis paradigms.
 
 ## Philosophy
 
-**Aether** (Gr. Αἰθήρ) embodies the classical element that fills the universe, the pure essence that conveys all phenomena. Like the theoretical medium through which waves propagate, this engine treats your state array as the fabric of a sonic universe that never stops. Its design has evolved to support a hierarchy of increasingly abstract and organic synthesis models.
+**Aether** (Gr. Αἰθήρ) embodies the classical element that fills the universe, the pure essence that conveys all phenomena. Like the theoretical medium through which waves propagate, this engine treats your state array as the fabric of a sonic universe that never stops.
 
 When you edit parameters, the sonic medium morphs seamlessly because its state persists across code changes. The monochord's string continues vibrating; only the tension changes.
 
-**See [docs/AETHER_PARADIGMS.md](docs/AETHER_PARADIGMS.md) for the full design philosophy.**
+**See [docs/AETHER_PARADIGMS.md](docs/AETHER_PARADIGMS.md) for the full design philosophy and the Five Elements.**
+
+## The Five Paradigms (Arche)
+
+Aether supports five fundamental synthesis paradigms, each representing a different level of abstraction:
+
+| Paradigm | Element | Signature | Concept |
+|----------|---------|-----------|---------|
+| **Rhythmos** | Earth 🌍 | `f(state, sr)` | Explicit state management |
+| **Kanon** | Fire 🔥 | `f(t)` | Pure functions of time |
+| **Atomos** | Air 💨 | `f(state, dt)` | Discrete generative processes |
+| **Physis** | Water 💧 | `flow(state)` | Physics simulation |
+| **Chora** | Aether ✨ | `field(state)` | Spatial resonance fields |
+
+Currently, **Rhythmos** is fully implemented. The others are coming soon.
 
 ## Quick Start
 
@@ -21,27 +35,34 @@ bun install
 # 2. Link commands globally (one-time setup)
 bun link
 
-# 3. Start the live sound surgery server in a terminal
-kanon                    # Loads live-session.js (default)
-kanon my-session.js      # Load a custom session file
+# 3. Start the live sound engine in a terminal
+aether                    # Loads live-session.js (default)
+aether my-session.js      # Load a custom session file
 
 # 4. In a separate terminal, send commands or start a REPL
-kanon-client send my-session.js  # Send a whole file
-kanon-client repl                # Start an interactive REPL
+aether-client send my-session.js  # Send a whole file
+aether-client repl                # Start an interactive REPL
 
 # The traditional hot-reload method still works too:
 bun --hot src/index.js
 ```
 
-The `kanon` command starts the server. You can then interact with it using `kanon-client` for surgical code injection, or rely on Bun's hot-reloading by editing your session file.
+The `aether` command starts the server. You can then interact with it using `aether-client` for surgical code injection, or rely on Bun's hot-reloading by editing your session file.
 
 ## Architecture
 
 ```
 ┌───────────────────────────────────────────┐
-│  live-session.js - Live Coding Interface       │  ← Edit this!
+│  live-session.js - Live Coding Interface  │  ← Edit this!
 ├───────────────────────────────────────────┤
-│  kanon.js - Signal Registry (FRP)         │  ← State transformers
+│  src/arche/                               │
+│    ├── rhythmos/ (Earth 🌍)              │  ← Paradigm modules
+│    ├── kanon/ (Fire 🔥)                  │
+│    ├── atomos/ (Air 💨)                  │
+│    ├── physis/ (Water 💧)                │
+│    └── chora/ (Aether ✨)                │
+├───────────────────────────────────────────┤
+│  aether.js - Signal Registry              │  ← Paradigm-agnostic mixer
 ├───────────────────────────────────────────┤
 │  storage.js - Ring Buffer (The Well)      │  ← SharedArrayBuffer
 ├───────────────────────────────────────────┤
@@ -53,80 +74,89 @@ The `kanon` command starts the server. You can then interact with it using `kano
 
 ### Key Features
 
-- **Phase Continuity**: State persists in `globalThis.KANON_STATE` during hot-reload
+- **Phase Continuity**: State persists in `globalThis.AETHER_STATE` during hot-reload
+- **Multi-Paradigm**: Mix Earth (Rhythmos), Fire (Kanon), Air (Atomos), Water (Physis), and Aether (Chora)
 - **Zero-Copy Architecture**: `subarray()` eliminates GC pauses
 - **Soft Clipping**: All signals auto-clipped with `Math.tanh()` for safety
 - **48kHz @ 32-bit float**: Native floating-point audio (no int16 quantization)
-- **Functional Purity**: Pure state transformers (state → nextState → sample)
-- **Dimension Agnostic**: STRIDE=1 (mono) now, upgradable to stereo/3D later
+- **Stereo Support**: STRIDE=2 for full stereo output
+- **Context-Based Updates**: All paradigms receive `{t, dt, sampleRate}` context
 
-## Basic Usage
+## Basic Usage (Rhythmos Paradigm)
 
 ### Simple Sine Wave
 
 ```javascript
-import { kanon } from './kanon.js';
+import { Rhythmos } from './src/arche/rhythmos/index.js';
 
-kanon('carrier', (mem, idx) => {
-  const freq = 440.0; // Change this and save - NO CLICKS!
-
-  return {
-    update: (sr) => {
-      // Read-modify-write pattern
-      mem[idx] = (mem[idx] + freq / sr) % 1.0;
-
-      // Emit sample
-      return [Math.sin(mem[idx] * 2 * Math.PI) * 0.5];
-    }
-  };
-});
+Rhythmos.register('carrier',
+  Rhythmos.pipe(
+    Rhythmos.sin(440),  // Change this and save - NO CLICKS!
+    Rhythmos.gain(0.3)
+  )
+);
 ```
 
-### Pythagorean Harmony
+### Stereo Panning
 
 ```javascript
-kanon('harmony', (mem, idx) => {
-  const fundamental = 220.0; // A3
-  const fifth = fundamental * 3/2;  // Perfect fifth (1.5)
-  const fourth = fundamental * 4/3; // Perfect fourth (1.333...)
-
-  return {
-    update: (sr) => {
-      // Three voices in pure Pythagorean ratios
-      mem[idx] = (mem[idx] + fundamental / sr) % 1.0;
-      mem[idx + 1] = (mem[idx + 1] + fifth / sr) % 1.0;
-      mem[idx + 2] = (mem[idx + 2] + fourth / sr) % 1.0;
-
-      const s1 = Math.sin(mem[idx] * 2 * Math.PI);
-      const s2 = Math.sin(mem[idx + 1] * 2 * Math.PI);
-      const s3 = Math.sin(mem[idx + 2] * 2 * Math.PI);
-
-      return [(s1 + s2 + s3) * 0.2];
-    }
-  };
-});
+Rhythmos.register('panned-sine',
+  Rhythmos.pipe(
+    Rhythmos.sin(330),
+    Rhythmos.gain(0.4),
+    Rhythmos.pan(0.75)  // Pan to the right
+  )
+);
 ```
 
-### Vortex Morph (Phase Modulation)
+### Binaural Beat
 
 ```javascript
-kanon('vortex-morph', (mem, idx) => {
-  // --- SURGERY PARAMS (change these live!) ---
-  const baseFreq = 110.0;      // Deep G2 note
-  const modRatio = 1.618;      // Golden Ratio
-  const morphSpeed = 0.2;      // Breathe rate (Hz)
-  const intensity = 6.0;       // 0.0 = sine, 50.0 = chaos
+Rhythmos.register('binaural',
+  Rhythmos.stereo(
+    Rhythmos.pipe(Rhythmos.sin(432), Rhythmos.gain(0.3)),  // Left
+    Rhythmos.pipe(Rhythmos.sin(434), Rhythmos.gain(0.3))   // Right (2Hz beat)
+  )
+);
+```
+
+### Complex Modulation
+
+```javascript
+Rhythmos.register('tremolo',
+  Rhythmos.pipe(
+    Rhythmos.am(
+      Rhythmos.lfo(4)       // 4 Hz modulator
+    )(
+      Rhythmos.sin(440)     // 440 Hz carrier
+    ),
+    Rhythmos.gain(0.5)
+  )
+);
+```
+
+### Manual API (Advanced)
+
+For more control, you can use the lower-level factory API:
+
+```javascript
+Rhythmos.register('vortex-morph', (mem, idx, sampleRate) => {
+  // Your parameters
+  const baseFreq = 110.0;
+  const modRatio = 1.618;
+  const morphSpeed = 0.2;
+  const intensity = 6.0;
 
   return {
-    update: (sr) => {
+    update: (context) => {
       // Accumulate three phases
       let p1 = mem[idx];         // Carrier
       let p2 = mem[idx + 1];     // Modulator
       let t  = mem[idx + 2];     // LFO
 
-      p1 = (p1 + baseFreq / sr) % 1.0;
-      p2 = (p2 + (baseFreq * modRatio) / sr) % 1.0;
-      t  = (t + morphSpeed / sr) % 1.0;
+      p1 = (p1 + baseFreq / sampleRate) % 1.0;
+      p2 = (p2 + (baseFreq * modRatio) / sampleRate) % 1.0;
+      t  = (t + morphSpeed / sampleRate) % 1.0;
 
       mem[idx] = p1;
       mem[idx + 1] = p2;
@@ -143,84 +173,46 @@ kanon('vortex-morph', (mem, idx) => {
 });
 ```
 
-### Van der Pol Oscillator
-
-```javascript
-const vanDerPolStep = (state, { mu, dt }) => {
-  const [x, y] = state;
-  const dx = y;
-  const dy = mu * (1 - x * x) * y - x;
-  return [x + dx * dt, y + dy * dt];
-};
-
-kanon('van-der-pol', (mem, idx) => {
-  // --- SURGERY PARAMETERS ---
-  const params = { mu: 1.5, dt: 0.12 };
-
-  // Initialize if empty
-  if (mem[idx] === 0) {
-    mem[idx] = 0.1;
-    mem[idx + 1] = 0.1;
-  }
-
-  return {
-    update: () => {
-      // Pure functional state transformation
-      const current = [mem[idx], mem[idx + 1]];
-      const [nextX, nextY] = vanDerPolStep(current, params);
-
-      // Commit to persistent memory
-      mem[idx] = nextX;
-      mem[idx + 1] = nextY;
-
-      // Emit (X is the signal)
-      return [nextX * 0.4];
-    }
-  };
-});
-```
-
 ## Live Surgery Workflows
 
-Kanon supports two primary workflows for live code manipulation. Both achieve the same goal: modifying sound without resetting phase.
+Aether supports two primary workflows for live code manipulation.
 
 ### Method 1: Interactive REPL (Recommended)
 
-This method uses the `kanon-client` to send small, surgical code snippets to the running server. It is precise and ideal for performance.
+This method uses `aether-client` to send small, surgical code snippets to the running server.
 
-1.  **Start Server**: In one terminal, run `kanon`.
-2.  **Start REPL**: In a second terminal, run `kanon-client repl`.
+1.  **Start Server**: In one terminal, run `aether`.
+2.  **Start REPL**: In a second terminal, run `aether-client repl`.
 3.  **Evaluate Code**: Type JavaScript code into the REPL and press Enter.
 
 ```
-kanon> kanon('noise', () => ({ update: () => [Math.random() * 0.1] }))
+aether> import { Rhythmos } from './src/arche/rhythmos/index.js';
 Sent successfully.
-kanon> remove('carrier') // Remove a previously defined signal
+aether> Rhythmos.register('noise', () => ({ update: () => [Math.random() * 0.1] }))
 Sent successfully.
-kanon> clear() // Clear all signals
+aether> import { clear } from './src/aether.js'; clear()
 Sent successfully.
 ```
 
-You can also send an entire file to be evaluated with `kanon-client send my-session.js`.
+You can also send an entire file: `aether-client send my-session.js`.
 
 ### Method 2: File-Based Hot-Reload
 
-This is the classic workflow, powered by Bun's `--hot` flag. It's great for developing larger pieces from a single source file.
+Classic workflow, powered by Bun's `--hot` flag.
 
-1.  **Start Kanon with Hot-Reload**: `bun --hot src/index.js`
+1.  **Start Aether with Hot-Reload**: `bun --hot src/index.js`
 2.  **Open** `live-session.js` in your editor.
-3.  **Edit** a parameter (e.g., `intensity = 6.0` → `intensity = 12.0`).
+3.  **Edit** a parameter (e.g., `Rhythmos.sin(440)` → `Rhythmos.sin(550)`).
 4.  **Save** (`:w` in Vim).
 5.  **Hear it morph instantly** with zero discontinuity.
 
 ### Why It Works
 
 When you send code via the REPL or save a file with hot-reload:
-1.  The new code is evaluated (`eval()` for REPL, module reload for `--hot`).
-2.  The old signal registry is modified or cleared.
-3.  New `kanon()` calls register fresh closures with updated parameters.
-4.  **State in `globalThis.KANON_STATE` is untouched.**
-5.  The audio signal continues from its exact phase position, but with new mathematical rules.
+1.  The new code is evaluated.
+2.  The signal registry is updated with new closures.
+3.  **State in `globalThis.AETHER_STATE` is untouched.**
+4.  The audio signal continues from its exact phase position, but with new parameters.
 
 This is **phase-continuous hot-swapping** - like adjusting a monochord's string tension while it's still vibrating.
 
@@ -229,86 +221,109 @@ This is **phase-continuous hot-swapping** - like adjusting a monochord's string 
 ### Persistent State Buffer
 
 ```javascript
-globalThis.KANON_STATE ??= new Float64Array(1024);
+globalThis.AETHER_STATE ??= new Float64Array(1024);
 ```
 
-Each signal gets a deterministic slot via string hash:
+Each signal gets a deterministic slot via string hash. Your state survives hot-reload, which is why oscillators don't click or reset phase when you change parameters.
+
+## Rhythmos API Reference
+
+### Registration
 
 ```javascript
-kanon('my-signal', (mem, idx) => {
-  // You get ~3-4 slots typically
-  mem[idx]     // First variable (e.g., phase)
-  mem[idx + 1] // Second variable (e.g., LFO)
-  mem[idx + 2] // Third variable (e.g., envelope)
-  // ...
-});
+Rhythmos.register(id, factory)
 ```
 
-**Critical**: State survives hot-reload! This is why oscillators don't click or reset phase when you change parameters.
+### Oscillators
 
-## API Reference
+- `Rhythmos.sin(freq)` - Sine wave
+- `Rhythmos.saw(freq)` - Sawtooth
+- `Rhythmos.square(freq)` - Square wave
+- `Rhythmos.tri(freq)` - Triangle wave
+- `Rhythmos.lfo(freq)` - Low-frequency oscillator (0-1 range)
 
-### Core Functions
+### Processors
 
-#### `kanon(id, factory)`
-Register a signal for live surgery.
+- `Rhythmos.gain(amount)` - Multiply signal
+- `Rhythmos.offset(amount)` - Add constant
+- `Rhythmos.clip()` - Hard clip to [-1, 1]
+- `Rhythmos.softClip()` - Soft clip with tanh
 
-- **id** (string): Unique identifier
-- **factory** (function): `(mem, idx) => { update: (sr) => [samples...] }`
-- **Returns**: Signal object
+### Stereo
 
-#### `updateAll(sampleRate)`
-Mix all registered signals and apply soft clipping.
+- `Rhythmos.pan(position)` - Pan mono to stereo (0=left, 1=right)
+- `Rhythmos.stereo(leftSig, rightSig)` - Combine two mono signals
+- `Rhythmos.mono()` - Mix down to mono
+- `Rhythmos.spread()` - Duplicate mono to stereo
 
-- **sampleRate** (number): Sample rate (e.g., 48000)
-- **Returns**: Array of mixed samples
+### Mixing
 
-#### `clear()`
-Remove all registered signals. (Called automatically on hot-reload)
+- `Rhythmos.mix(...signals)` - Mix multiple signals
+- `Rhythmos.add(sigA, sigB)` - Add two signals
 
-#### `list()`
+### Modulation
+
+- `Rhythmos.am(modulator)(carrier)` - Amplitude modulation
+
+### Effects
+
+- `Rhythmos.feedback(delayTime, feedbackAmt)` - Delay with feedback
+
+### Composition
+
+- `Rhythmos.pipe(...functions)` - Left-to-right composition
+- `Rhythmos.compose(...functions)` - Right-to-left composition
+
+## Core API
+
+These functions are available from `aether.js`:
+
+### `clear()`
+Remove all registered signals.
+
+### `list()`
 Get array of all registered signal IDs.
 
-#### `remove(id)`
+### `remove(id)`
 Remove a specific signal by ID.
 
 ## Files
 
-- **index.js** - Entry point, console interface
-- **engine.js** - Producer loop, lifecycle management
-- **kanon.js** - Signal registry & mixing logic
-- **storage.js** - Ring buffer (SharedArrayBuffer)
-- **transport.js** - Audio output (speaker.js)
+- **src/index.js** - Entry point
+- **src/engine.js** - Producer loop, lifecycle management
+- **src/aether.js** - Paradigm-agnostic signal registry & mixer
+- **src/storage.js** - Ring buffer (SharedArrayBuffer)
+- **src/transport.js** - Audio output (speaker.js)
+- **src/arche/** - Paradigm-specific modules
+  - **rhythmos/** - Earth 🌍 (explicit state)
+  - **kanon/** - Fire 🔥 (pure time functions) - *Coming soon*
+  - **atomos/** - Air 💨 (discrete processes) - *Coming soon*
+  - **physis/** - Water 💧 (physics simulation) - *Coming soon*
+  - **chora/** - Aether ✨ (spatial fields) - *Coming soon*
 - **live-session.js** - **YOUR CODE** - Live-codeable signal definitions
-- **math-helpers.js** - Vector math utilities (optional)
 
 ## Technical Details
 
 - **Runtime**: Bun with `--hot` flag for hot-reload
-- **Audio**: speaker.js (48kHz @ 32-bit float)
+- **Audio**: speaker.js (48kHz @ 32-bit float, stereo)
 - **State Memory**: Float64Array (1024 slots, sub-sample precision)
 - **Ring Buffer**: SharedArrayBuffer (32768 frames, ~680ms @ 48kHz)
 - **Producer Loop**: `setImmediate` saturation for maximum throughput
 - **Soft Clipping**: `Math.tanh()` on mixed output
+- **Context Passing**: All signals receive `{t, dt, sampleRate}` for paradigm flexibility
 
 ## Why This Architecture?
 
-### vs. Traditional `f(t)` Synthesis
+### The Multi-Paradigm Vision
 
-Traditional systems evaluate `f(t)` - a pure function of time:
+Different musical ideas require different levels of abstraction:
+- **Rhythmos** (Earth) - Solid, predictable oscillators and envelopes
+- **Kanon** (Fire) - Pure mathematical beauty
+- **Atomos** (Air) - Generative, emergent textures
+- **Physis** (Water) - Organic, physically-modeled instruments
+- **Chora** (Aether) - Spatial acoustics and reverb
 
-```javascript
-// Can't do live surgery - restarting resets t
-const sample = Math.sin(t * 2 * Math.PI * freq);
-```
-
-Kanon uses `f(state)` - recursive state transformations:
-
-```javascript
-// Phase persists across parameter changes
-mem[idx] = (mem[idx] + freq / sr) % 1.0;
-const sample = Math.sin(mem[idx] * 2 * Math.PI);
-```
+Aether lets you use all five together in a single composition.
 
 ### The Monochord Philosophy
 
@@ -317,40 +332,34 @@ Pythagoras discovered that harmony is mathematical using the monochord - a singl
 - Divide at 2:3 = Perfect Fifth
 - Divide at 3:4 = Perfect Fourth
 
-In Kanon:
+In Aether:
 - Your state array is the vibrating string
 - Phase accumulation is continuous vibration
 - Hot-reload adjusts tension while the string plays
 - The monochord never stops. Neither does your music.
 
-### vs. Lisp/Incudine
-
-See [docs/BEYOND-LISP.md](docs/BEYOND-LISP.md) for philosophical comparison.
-
-**Key advantages**:
-- No RT kernel requirement
-- Unified memory (audio + visualization)
-- JIT optimization (adaptive runtime compilation)
-- Web-native deployment
-- NPM ecosystem access
-
 ## Documentation
 
-- **[SURGERY_GUIDE.md](docs/SURGERY_GUIDE.md)** - Live coding workflow and best practices
-- **[BEYOND-LISP.md](docs/BEYOND-LISP.md)** - How Kanon transcends Lisp/Incudine
+- **[AETHER_PARADIGMS.md](docs/AETHER_PARADIGMS.md)** - The Five Elements philosophy
+- **[SURGERY_GUIDE.md](docs/SURGERY_GUIDE.md)** - Live coding workflow
+- **[BEYOND-LISP.md](docs/BEYOND-LISP.md)** - How Aether transcends Lisp/Incudine
 - **[PERFORMANCE_OPTIMIZATION.md](docs/PERFORMANCE_OPTIMIZATION.md)** - Optimization strategies
 - **[AUDIO_BACKEND_ARCHITECTURE.md](docs/AUDIO_BACKEND_ARCHITECTURE.md)** - Backend design
-- **[SAMPLE_RATE_ARCHITECTURE.md](docs/SAMPLE_RATE_ARCHITECTURE.md)** - Sample rate handling
-- **[STATE_MANAGEMENT_BEST_PRACTICES.md](docs/STATE_MANAGEMENT_BEST_PRACTICES.md)** - State patterns
 
 ## Roadmap
 
-- [x] Core FRP architecture with closures
+- [x] Core multi-paradigm architecture
+- [x] Rhythmos paradigm (Earth 🌍)
 - [x] Phase-continuous hot-swapping
 - [x] 48kHz @ 32-bit float audio
+- [x] Stereo support (STRIDE=2)
 - [x] Zero-copy buffer optimization
 - [x] Soft clipping with tanh()
-- [ ] Stereo support (STRIDE=2)
+- [x] Context-based signal updates
+- [ ] Kanon paradigm (Fire 🔥)
+- [ ] Atomos paradigm (Air 💨)
+- [ ] Physis paradigm (Water 💧)
+- [ ] Chora paradigm (Aether ✨)
 - [ ] JACK FFI transport (PULL mode, <10ms latency)
 - [ ] 3D oscilloscope integration (STRIDE=4: XYZW)
 - [ ] Vim eval integration (select → send → eval)
@@ -374,4 +383,4 @@ MIT
 
 ---
 
-*"The monochord never stopped vibrating. It just evolved."* - Kanon Engineering Principle
+*"The monochord never stopped vibrating. It just evolved."* - Aether Engineering Principle
