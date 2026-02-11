@@ -1,3 +1,26 @@
+
+
+
+
+
+▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀
+ > hi gemini, can you read my README.md and then my PARADIGM-DESIGN.md doc. we are moving to  
+   the new design api. but I think we have a lot of unnessesary complexity in the codebase    
+   now that we have such a simple structure let's think about a radical simple design. let's  
+   try a rebuild in a new folder called /lol here we will make the simplified version. No     
+   repl support, just supporting bun hot reloading. we still need the stride,                 
+   grobalThis.LOL_STATE and globalThis.LOL_REGISTRY, we need a clear function, a ring buffer, 
+   we can directly copy the helpers. let's really think about a simplified archetecture and   
+   perhaps a different level of abstraction only if it calls to us.
+
+
+
+
+
+
+
+
+
 # Aether Paradigm Design
 
 > *"The ultimate live coding instrument for scientific audio art"*

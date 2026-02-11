@@ -747,7 +747,7 @@ import { Zap } from './src/arche/zap/index.js';
 // ----------------------------------------------------------------------------
 
 // 🔥 Kanon (Fire) - Pure mathematical function
-const fire = s => Math.sin(2 * Math.PI * 440 * s.t);
+const fire = ({t}) => Math.sin(2 * Math.PI * 440 * t);
 
 // 🌍 Rhythmos (Earth) - Stateful phase accumulation
 const earth = s => {
