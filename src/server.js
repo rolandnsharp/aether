@@ -1,6 +1,6 @@
-// lel/index.js - The `lel` Audio Engine (REPL-Driven)
+// Aether Audio Engine (REPL-Driven)
 
-import { startStream, config } from './transport.js';
+import { startStream, config } from './speaker.js';
 import * as helpers from './helpers.js';
 import dgram from 'dgram';
 
