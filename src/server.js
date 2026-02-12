@@ -1,7 +1,7 @@
 // Aether Audio Engine (REPL-Driven)
 
 import { startStream, config } from './speaker.js';
-import * as helpers from './helpers.js';
+import * as dsp from './dsp.js';
 import dgram from 'dgram';
 
 // --- High-Performance Configuration ---
@@ -53,7 +53,7 @@ const s = {
 // --- Public API (exposed to REPL via `eval`) ---
 
 const api = {
-    ...helpers, // Expose all helper functions directly
+    ...dsp, // Expose all DSP functions directly
 
     register: (name, fn) => {
         // --- The "Upsert" Logic ---
@@ -66,7 +66,7 @@ const api = {
 
         // Reset the helper's per-signal-chain counter at the start of every registration.
         // This is crucial for stable helper state keys within a signal's composition.
-        helpers.resetHelperCounterInternal(); // Call the internal reset
+        dsp.resetHelperCounterInternal(); // Call the internal reset
 
         let offset;
         if (OFFSETS.has(name)) {
