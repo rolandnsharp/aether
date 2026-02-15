@@ -56,6 +56,19 @@ aither start
 aither send my-session.js
 ```
 
+## Core API
+
+```javascript
+play('name', fn)        // Start a signal
+play('name', fn, 4)     // Start with 4-second fade-in
+stop('name')            // Stop immediately
+stop('name', 4)         // Stop with 4-second fade-out
+solo('name')            // Stop everything except this signal
+solo('name', 4)         // Fade out everything else over 4 seconds
+clear()                 // Remove all signals and reset state
+clear(4)                // Fade out all signals over 4 seconds
+```
+
 ## Examples
 
 ### Rhythmos: A Simple Oscillator

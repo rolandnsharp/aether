@@ -118,19 +118,49 @@ export const api = {
         garbageCollectHelpers(name);
     },
 
-    play: (name, fn) => api.register(name, fn),
-    stop: (name) => api.unregister(name),
+    play: (name, fn, fadeTime) => {
+        if (!fadeTime) return api.register(name, fn);
+        let fadeElapsed = 0;
+        const wrappedFn = (s) => {
+            fadeElapsed += s.dt;
+            const gain = fadeElapsed >= fadeTime ? 1 : fadeElapsed / fadeTime;
+            return fn(s) * gain;
+        };
+        api.register(name, wrappedFn);
+    },
+    stop: (name, fadeTime) => {
+        if (!fadeTime) return api.unregister(name);
+        const entry = REGISTRY.get(name);
+        if (!entry) return;
+        const originalFn = entry.fn;
+        let fadeRemaining = fadeTime;
+        entry.fn = (s) => {
+            fadeRemaining -= s.dt;
+            if (fadeRemaining <= 0) { api.unregister(name); return 0; }
+            return originalFn(s) * (fadeRemaining / fadeTime);
+        };
+    },
 
-    clear: (fullReset = false) => {
-        REGISTRY.clear();
-        if (fullReset) {
+    solo: (name, fadeTime) => {
+        for (const key of REGISTRY.keys()) {
+            if (key !== name) api.stop(key, fadeTime);
+        }
+    },
+
+    clear: (fadeTime) => {
+        if (!fadeTime) {
+            REGISTRY.clear();
             OFFSETS.clear();
             STATE.fill(0);
             if (globalThis.LEL_HELPER_SLOT_MAP) globalThis.LEL_HELPER_SLOT_MAP.clear();
             globalThis.LEL_HELPER_NEXT_SLOT = 0;
             globalThis.LEL_HELPER_FREE_LIST = [];
+            console.log('[Aither] Cleared function registry.');
+        } else {
+            for (const name of REGISTRY.keys()) {
+                api.stop(name, fadeTime);
+            }
         }
-        console.log('[Aither] Cleared function registry.');
     },
 
     setPosition: (newPosition) => {
