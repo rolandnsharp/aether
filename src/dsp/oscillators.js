@@ -69,5 +69,17 @@ export const pulse = (freq, width) => {
     };
 };
 
+// --- Phasor (0→1 ramp) ---
+// The fundamental rhythm primitive. A raw phase accumulator.
+export const phasor = (freq) => {
+    const idx = nextHelperIndex();
+    return s => {
+        const addr = claimStateBlock(s, 'phasor', idx, 1);
+        const f = typeof freq === 'function' ? freq(s) : freq;
+        mem[addr] = (mem[addr] + f / s.sr) % 1.0;
+        return mem[addr];
+    };
+};
+
 // --- White Noise (stateless) ---
 export const noise = () => _s => Math.random() * 2 - 1;

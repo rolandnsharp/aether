@@ -99,3 +99,31 @@ stop('osc-fm', 2)
 stop('osc-sin', 2)
 
 stop('osc-saw', 2)
+
+
+
+// Kick                                                    
+const beat = phasor(130/60);
+const envelope = share(decay(beat, 40));
+const kick = sin(s => 60 + envelope(s) * 200);     
+play('kick', s => kick(s) * envelope(s) * 0.8)
+                                                                                            
+// Snare on 2 and 4
+const snBeat = phasor(130/120);                                                             
+const snEnv = share(decay(s => (snBeat(s) + 0.5) % 1.0, 60));                    
+const body = sin(180);
+const crack = noise();
+play('snare', s => (body(s) * 0.5 + crack(s) * 0.5) * snEnv(s) * 0.6)
+
+// Hats on eighth notes
+const hatBeat = phasor(130/30);
+const hatEnv = decay(hatBeat, 80);
+const hiss = pipe(noise(), signal => highpass(signal, 6000));
+play('hats', s => hiss(s) * hatEnv(s) * 0.3)
+
+
+stop('kick', 4)
+
+stop('snare', 4)
+
+stop('hats', 4)

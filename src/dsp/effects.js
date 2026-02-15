@@ -24,6 +24,18 @@ const lowpass_mono = (s, input, mem, addr, _chan, cutoff) => {
 };
 export const lowpass = expand(lowpass_mono, 'lowpass', 1);
 
+// --- Highpass Filter ---
+// Subtract the lowpassed signal from the input.
+const highpass_mono = (s, input, mem, addr, _chan, cutoff) => {
+    const cutoffFn = typeof cutoff === 'function' ? cutoff : () => cutoff;
+    const alpha = Math.min(1, Math.max(0, cutoffFn(s) / s.sr));
+    const z1 = mem[addr] || 0;
+    const lp = z1 + alpha * (input - z1);
+    mem[addr] = lp;
+    return input - lp;
+};
+export const highpass = expand(highpass_mono, 'highpass', 1);
+
 // --- Delay ---
 const delay_mono = (s, input, mem, addr, _chan, maxTime, time) => {
     const bufferLength = Math.floor(maxTime * s.sr);
