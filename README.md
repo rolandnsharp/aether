@@ -74,6 +74,26 @@ clear()                 // Remove all signals and reset state
 clear(4)                // Fade out all signals over 4 seconds
 ```
 
+### Multichannel Signals
+
+A signal function returns a number for mono, or an array for multichannel:
+
+```javascript
+// Mono — same signal in both speakers
+play('mono', sin(440))
+
+// Stereo — return [left, right]
+const L = gain(sin(440), 0.3);
+const R = gain(sin(442), 0.3);
+play('detune', s => [L(s), R(s)])
+
+// Quad — return [FL, FR, RL, RR]
+play('quad', s => [a(s), b(s), c(s), d(s)])
+
+// Or use pan to place a mono source in the stereo field
+play('panned', pan(sin(440), -0.3))
+```
+
 ## Examples
 
 ### Rhythmos: A Simple Oscillator
