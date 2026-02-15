@@ -190,7 +190,7 @@ export const mix = (...signals) => {
         const r = results[j];
         sum += (Array.isArray(r) ? r[0] : r) || 0;
       }
-      return sum / signals.length;
+      return sum;
     }
 
     // Reuse output buffer, resize only if channel count changes.
@@ -210,10 +210,6 @@ export const mix = (...signals) => {
           outputBuf[i] += r || 0;
         }
       }
-    }
-
-    for (let i = 0; i < maxStride; i++) {
-      outputBuf[i] /= signals.length;
     }
 
     return outputBuf;
