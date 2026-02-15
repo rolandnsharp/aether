@@ -1,300 +1,282 @@
 # Composing with Signals: The Aither Philosophy of Rhythm
 
-> The Clock is not a special object given to you by the engine. The Clock is a signal, created and composed by you. In Aither, rhythm is not a feature; it is an emergent property of the system.
+> The Clock is not a special object given to you by the engine. The Clock is
+> a signal, created and composed by you. In Aither, rhythm is not a feature;
+> it is an emergent property of the system.
 
-## The Core Principle: The Signal as Clock
+## The Core Principle
 
-In many music environments, rhythm is based on a central, "special" clock or a timeline-based sequencer. You place notes on a grid, and the engine plays them.
+In most live coding environments, rhythm is based on a central clock or a
+timeline. You place notes on a grid, and the engine plays them.
 
-Aither's philosophy is more fundamental and powerful. It follows the principles of classic modular synthesis:
+Aither follows the modular synthesis approach:
 
-1.  **There is no master clock.** The only universal truth is `s.t` (absolute time).
-2.  **A "clock" is just a low-frequency signal.** Typically, a square wave.
-3.  **Rhythm is created by combining and transforming these clock signals.** You create complex patterns not by filling in a grid, but by composing signals through mathematical and logical operations.
+1. **There is no master clock.** The only universal truth is `s.t`.
+2. **A "clock" is just a low-frequency oscillator.**
+3. **Rhythm emerges from composing signals through math.**
 
-This approach is more flexible, more generative, and more aligned with Aither's core `f(s)` paradigm. You don't ask for a clock; you *build* one.
-
----
-
-## The Fundamental Building Block: The Pulse
-
-Everything starts with a simple square wave derived from absolute time. This is your master clock, your metronome, your heartbeat.
-
-```javascript
-// A simple helper for a square wave oscillator
-const square = (freq, s) => Math.sign(Math.sin(s.t * freq * 2 * Math.PI));
-
-// Let's define our BPM
-const BPM = 120;
-const master_freq = BPM / 60; // 120 beats per minute = 2 beats per second = 2 Hz
-
-play('master-clock', s => {
-  // This signal is our "quarter note" pulse.
-  // It will be +1 for the first half of the beat, -1 for the second.
-  const pulse = square(master_freq, s);
-  
-  // We can listen to it directly. It's just a sound.
-  return pulse * 0.5;
-});
-```
-
-This signal is the **Prime Mover** of your entire rhythmic universe.
-All other rhythms will be derived from it.
-
-## From Pulse to Rhythm: Clock Division & Logic
-
-The power of this model comes from "clock division" and "logic"—using math to create faster or slower pulses and combining them to form patterns.
-
-Let's build a classic techno beat inside a single `f(s)` function.
-
-### Building a Drum Machine
-
-We'll need one more simple helper: `on_rising_edge`. This function takes a pulse and outputs a very short `1.0` value only at the exact moment the pulse switches from negative to positive, creating a "trigger."
-
-```javascript
-// Assume the existence of these helpers:
-// on_rising_edge(pulse_signal, s) -> trigger signal
-// kick(trigger, s) -> kick drum sound
-// hat(trigger, s) -> hi-hat sound
-// snare(trigger, s) -> snare sound
-
-play('drum-machine', s => {
-  const BPM = 130;
-  const master_freq = BPM / 60;
-  
-  // --- 1. CLOCK DIVISIONS ---
-  // Our master pulse for quarter notes (kick, snare gate)
-  const quarter_pulse = square(master_freq, s);
-  
-  // A faster pulse for eighth notes (hi-hats)
-  const eighth_pulse = square(master_freq * 2, s);
-
-  // A slower pulse for gating the snare every two beats
-  const half_measure_pulse = square(master_freq / 2, s);
-  
-  // --- 2. LOGICAL PATTERNS ---
-  // The kick triggers on every quarter note pulse.
-  const kick_trigger = on_rising_edge(quarter_pulse, s);
-  
-  // The hi-hats trigger on the off-beat.
-  // We use the quarter_pulse as a gate to silence the on-beats.
-  const off_beat_gate = (1 - quarter_pulse) / 2; // Is 1 on off-beats, 0 on on-beats
-  const hat_trigger = on_rising_edge(eighth_pulse * off_beat_gate, s);
-  
-  // The snare triggers on beats 2 and 4.
-  // We use the half_measure_pulse to gate the quarter notes.
-  const snare_gate = (1 - half_measure_pulse) / 2; // Is 1 on beats 2 & 4
-  const snare_trigger = on_rising_edge(quarter_pulse * snare_gate, s);
-
-  // --- 3. SOUND GENERATION ---
-  const kick_sound = kick(kick_trigger, s) * 0.9;
-  const hat_sound = hat(hat_trigger, s) * 0.4;
-  const snare_sound = snare(snare_trigger, s) * 0.7;
-  
-  // --- 4. MIXING ---
-  return kick_sound + hat_sound + snare_sound;
-});
-```
-
-In one function, you have an entire, generative drum machine. To change the pattern, you don't edit a grid—you change the math. This is live "surgical" editing of the rhythmic DNA itself.
+You don't ask for a clock; you build one.
 
 ---
 
-## From Rhythm to Melody: The Phasor
+## The Phasor: The Fundamental Rhythm Primitive
 
-A pulse is great for triggering events, but for melodies and sequences, we need a continuous ramp from 0 to 1 that resets on every beat. This is called a **Phasor**.
+The most important signal for rhythm is the **phasor** — a ramp from 0 to 1
+that repeats at a given frequency. It answers the question: *where am I in
+the current beat?*
 
-A phasor is easily derived from our clock signal. It tells us *where we are* within a given beat.
+A phasor is the raw phase accumulator that lives inside every oscillator.
+All other rhythm concepts — gates, envelopes, triggers, sequences — are
+derived from the phasor through simple math.
+
+```
+phasor at 2 Hz (120 BPM):
+
+1 |    /|    /|    /|    /|
+  |   / |   / |   / |   / |
+  |  /  |  /  |  /  |  /  |
+  | /   | /   | /   | /   |
+0 |/    |/    |/    |/    |
+  |-----|-----|-----|-----|
+  0    0.5   1.0   1.5   2.0 sec
+```
+
+> **Note:** `phasor(freq)` is planned but not yet implemented as a helper.
+> For now, use the phase directly inside your signal function with `s.state`:
 
 ```javascript
-// A helper that creates a 0-to-1 ramp from a pulse signal
-const phasor = (pulse_signal) => { /* ... logic ... */ };
+play('click', s => {
+  // Manual phasor: advance phase, wrap at 1.0
+  const bps = 130 / 60;
+  s.state[0] = (s.state[0] + bps / s.sr) % 1.0;
+  const phase = s.state[0];
 
-// Let's build a bassline arpeggiator
-const c_minor_pentatonic = [60, 63, 65, 67, 70]; // MIDI notes
-
-play('arp-bass', s => {
-  const BPM = 130;
-  const master_freq = BPM / 60;
-
-  // We'll use an eighth note pulse for our arpeggiator's speed
-  const eighth_pulse = square(master_freq * 2, s);
-  
-  // Convert the pulse to a phasor, which ramps from 0 to 1 on every pulse
-  const arp_phasor = phasor(eighth_pulse, s);
-  
-  // Use the phasor to select a note from our scale
-  // `Math.floor(arp_phasor * 5)` will give us an index: 0, 1, 2, 3, 4
-  const note_index = Math.floor(arp_phasor * c_minor_pentatonic.length);
-  const current_note = c_minor_pentatonic[note_index];
-  
-  // The trigger for the bass envelope
-  const arp_trigger = on_rising_edge(eighth_pulse, s);
-  
-  // Generate the bass sound
-  const bass_sound = bass(current_note, arp_trigger, s);
-  
-  // Add a filter for character
-  return lpf(bass_sound, 400, 0.7);
-});
+  // A click at the start of each beat
+  return phase < 0.002 ? 0.8 : 0;
+})
 ```
-The phasor is the bridge between rhythm and melody. It translates the raw pulse of the clock into a usable index for sequencing.
 
 ---
 
-## Incorporating the Looper
+## From Phasor to Rhythm
 
-Your "Stateful Looper" fits into this paradigm perfectly. Its actions are triggered by the very same clock signals that drive your drum machines and arpeggiators.
+Everything is derived from the phasor value with simple math:
 
-Let's imagine you have a `looper` helper. It needs to know when to start recording and how long to record for. We provide this information with our clock signals.
+### Gate (on/off pulse)
 
 ```javascript
-// A simple helper that outputs 1.0 when a controller button is held
-const foot_pedal = (s) => s.controllers.pedal; // Assume s.controllers exists
-
-play('live-guitar-loop', s => {
-  const BPM = 130;
-  const master_freq = BPM / 60;
-  
-  // --- DEFINE THE RHYTHMIC GRID ---
-  // We want to start recording on the downbeat of a measure.
-  const measure_pulse = square(master_freq / 4, s);
-  const measure_trigger = on_rising_edge(measure_pulse, s);
-  
-  // The user "primes" the recording with a foot pedal.
-  // The actual recording starts on the next measure_trigger.
-  const record_trigger = measure_trigger * foot_pedal(s);
-  
-  // --- DEFINE THE LOOP LENGTH MUSICALLY ---
-  const bars = 2;
-  const beats_per_bar = 4;
-  const loop_length_in_beats = bars * beats_per_bar;
-  const loop_length_in_seconds = loop_length_in_beats * (60 / BPM);
-  const loop_length_in_samples = loop_length_in_seconds * s.sr;
-  
-  // --- CREATE THE LOOPER ---
-  // `guitar_input` is a special signal for live audio
-  const looped_sound = looper({
-    source: guitar_input,
-    recordTrigger: record_trigger,
-    lengthInSamples: loop_length_in_samples
-  }, s); // Pass s to the looper helper
-  
-  return looped_sound;
-});
+// Gate: 1 for first 10% of beat, 0 otherwise
+const gate = phase < 0.1 ? 1 : 0;
 ```
 
-This is the Aither way:
-- The looper's start time is not manual; it's **quantized** to a signal derived from the master clock.
-- The looper's length is not a magic number of samples; it's **calculated** from a musical duration (bars).
-- The looper itself is just another signal processor in the chain.
+### Envelope (percussive decay)
 
-You can then perform "surgery" on the looper by modulating its playback speed with another clock signal, creating rhythmic stutters, tape-stop effects, or granular clouds—all perfectly in time with the rest of your track.
+```javascript
+// Fast exponential decay from the start of each beat
+const env = Math.exp(-phase * 30);
+```
 
-## The Aither Rhythm Philosophy: Summary
+### Sequence (step through values)
 
-1.  **Start with Time (`s.t`)**: All rhythm is derived from the fundamental flow of time.
-2.  **Create a Pulse**: Use a `square` wave to create a master clock signal. Its frequency is your BPM.
-3.  **Divide and Conquer**: Use math (`*2`, `/2`) on the master clock's frequency to create different rhythmic subdivisions (eighth notes, half notes, etc.).
-4.  **Compose with Logic**: Use gates (`(1 - pulse) / 2`), multiplication, and other logic to combine pulses into complex, generative patterns.
-5.  **Use Phasors for Melody**: Convert pulses to 0-to-1 ramps (`phasor`) to sequence through arrays of notes or parameters.
-6.  **Trigger Actions**: Use the rising edge of your clock pulses to trigger envelopes, start loop recordings, and drive your composition forward.
+```javascript
+// Select from array based on position in cycle
+const notes = [60, 63, 67, 70];
+const note = notes[Math.floor(phase * notes.length)];
+```
 
-In Aither, you are not a musician placing notes on a timeline. You are a sonic architect, designing a system of interconnected, pulsating signals whose interaction *is* the music.
+### Clock Division
+
+```javascript
+// Half-speed phasor (every 2 beats)
+const halfPhase = (s.state[1] + (bps / 2) / s.sr) % 1.0;
+
+// Double-speed phasor (eighth notes)
+const doublePhase = (s.state[2] + (bps * 2) / s.sr) % 1.0;
+```
 
 ---
-## Beyond the Basics: Advanced Rhythmic Concepts
 
-Once you are comfortable building rhythms from signals, you can explore the deeper architectural patterns that emerge from this philosophy.
+## Building a Heartbeat Kick
 
-### 1. Generative Rhythms: Patterns that Evolve Themselves
-
-So far, our drum patterns are static. The logic inside the `f(s)` function is fixed until you, the performer, surgically edit it. The next step is to create rhythms that have their own internal logic and can **evolve over musical time without your intervention.**
-
-This is done by using `s.state` not just for audio-rate state, but to store **musical-rate state**.
-
-**Example: A Hi-Hat Pattern that Gets Busier**
+This is Aither rhythm in practice — a kick drum built entirely from a
+phasor, an envelope, and a sine oscillator with pitch sweep:
 
 ```javascript
-// A helper to create a phasor that ramps over a given number of beats
-const musicalPhasor = (numBeats, s) => { /* ... */ };
+play('kick', s => {
+  // Phasor at 130 BPM
+  const bps = 130 / 60;
+  s.state[0] = (s.state[0] + bps / s.sr) % 1.0;
+  const phase = s.state[0];
 
-play('evolving-hats', s => {
-  const BPM = 130;
-  const master_freq = BPM / 60;
+  // Sharp exponential envelope — the transient
+  const env = Math.exp(-phase * 40);
 
-  // A phasor that ramps from 0 to 1 over 16 beats (4 bars)
-  const phrase_phasor = musicalPhasor(16, s);
+  // Pitch sweep: starts at 260 Hz, decays to 60 Hz
+  // This is what gives a kick its "thump"
+  const freq = 60 + 200 * env;
 
-  // The density will increase from 0.0 to 1.0 over the 4 bars.
-  const density = phrase_phasor + (Math.random() * 0.1);
-
-  const eighth_pulse = square(master_freq * 2, s);
-  const sixteenth_pulse = square(master_freq * 4, s);
-
-  // The main eighth-note hats are always there.
-  let hat_trigger = on_rising_edge(eighth_pulse, s);
-
-  // Add 16th notes based on the evolving density.
-  if (Math.random() < density) {
-    hat_trigger += on_rising_edge(sixteenth_pulse, s);
-  }
-  
-  return hat(hat_trigger, s) * 0.4;
-});
+  // Phase-continuous oscillator for the body
+  s.state[1] = (s.state[1] + freq / s.sr) % 1.0;
+  return Math.sin(s.state[1] * 2 * Math.PI) * env * 0.8;
+})
 ```
-You are no longer programming a pattern; you are programming the **rules by which the pattern changes over time.**
 
-### 2. The Ghost in the Machine: Groove and Swing
+No special kick drum helper. No sample playback. Just a phasor, an
+envelope derived from it, and a sine wave whose frequency follows the
+envelope. This is synthesis from first principles.
 
-Real dance music has "groove" or "swing"—a humanizing imperfection where some beats are slightly delayed or pushed forward. In Aither, you can build it directly into the fabric of time itself.
-
-**Example: Modulating Time to Create a "Shuffle" Feel**
+### Adding a Snare on Beats 2 and 4
 
 ```javascript
-play('swing-machine', s => {
-  const BPM = 130;
-  const master_freq = BPM / 60;
+play('snare', s => {
+  const bps = 130 / 60;
 
-  // A sine LFO that subtly pushes and pulls the timing of the off-beats.
-  const swing_lfo = Math.sin(s.t * master_freq * 2 * Math.PI);
-  const swing_amount = 0.01; // a 10ms push/pull
+  // Half-speed phasor — triggers every 2 beats
+  s.state[0] = (s.state[0] + (bps / 2) / s.sr) % 1.0;
+  const phase = s.state[0];
 
-  // We create a new "warped" time that is subtly modulated by our LFO.
-  const warped_t = s.t + swing_lfo * swing_amount;
+  // Offset by half a cycle so it hits on beats 2 and 4
+  const snarePhase = (phase + 0.5) % 1.0;
 
-  // Now, build the entire drum machine using warped_t instead of s.t!
-  const warped_square = (freq) => Math.sign(Math.sin(warped_t * freq * 2 * Math.PI));
+  // Snare envelope — shorter than kick
+  const env = Math.exp(-snarePhase * 60);
 
-  const quarter_pulse = warped_square(master_freq);
-  // ... the rest of your drum machine logic ...
-});
+  // Snare body (sine) + noise burst
+  s.state[1] = (s.state[1] + 180 / s.sr) % 1.0;
+  const body = Math.sin(s.state[1] * 2 * Math.PI) * 0.5;
+  const crack = (Math.random() * 2 - 1) * 0.5;
+
+  return (body + crack) * env * 0.6;
+})
 ```
-This is a powerful concept: you are not just placing notes on a timeline; you are **warping the timeline itself.**
 
-### 3. Abstracting Complexity: Building a Rhythmic Vocabulary
-
-The raw math of `(1 - quarter_pulse) / 2` is powerful, but not always expressive. The final step is to encapsulate these common patterns into a rich library of higher-level helpers.
-
-**Example: A Euclidean Rhythm Helper**
+### Hi-Hats on Eighth Notes
 
 ```javascript
-// in dsp.js or scheduler.js
-function euclidean(hits, steps, clock_signal, s) {
-  // ... complex but well-known algorithm ...
-  // This helper would return a trigger signal.
-}
+play('hats', s => {
+  const bps = 130 / 60;
 
-// How a user would use it to create a classic Cuban clave rhythm:
-play('clave', s => {
-  const BPM = 130;
-  const sixteenth_freq = (BPM / 60) * 4;
-  const sixteenth_clock = (s) => square(sixteenth_freq, s);
-  
-  // Create a 3-hit pattern spread over 8 steps
-  const tresillo_pattern = euclidean(3, 8, sixteenth_clock, s);
-  
-  return clave_sound(tresillo_pattern, s);
-});
+  // Double-speed phasor — eighth notes
+  s.state[0] = (s.state[0] + (bps * 2) / s.sr) % 1.0;
+  const phase = s.state[0];
+
+  // Very short envelope
+  const env = Math.exp(-phase * 80);
+
+  // Filtered noise
+  const noise = Math.random() * 2 - 1;
+  // Simple highpass: subtract lowpassed version
+  s.state[1] = s.state[1] * 0.8 + noise * 0.2;
+  const hipass = noise - s.state[1];
+
+  return hipass * env * 0.3;
+})
 ```
-By building helpers like `euclidean`, `polymeter`, and `swing`, you create a high-level **language for rhythm.** The code itself begins to read like a musical score.
+
+---
+
+## Two Patterns of Composition
+
+Aither supports two natural patterns:
+
+### Pattern 1: Separate Signals (Textures, Drones, Layers)
+
+```javascript
+play('pad', pipe(saw(110), signal => lowpass(signal, 400)))
+play('shimmer', sin(s => 880 + tri(0.3)(s) * 20))
+```
+
+Each signal is independent. Oscillator helpers compose cleanly.
+
+### Pattern 2: Inline (Percussive, Tightly Coupled)
+
+```javascript
+play('kick', s => {
+  // Phase, envelope, pitch, oscillator — all interdependent
+  const phase = ...;
+  const env = f(phase);
+  const freq = g(env);
+  return oscillator(freq) * env;
+})
+```
+
+When the envelope shapes the frequency which shapes the sound, everything
+lives in one function using `s.state` for persistence. This is natural for
+drums and percussive synthesis.
+
+Both patterns coexist. Use the one that fits the sound.
+
+---
+
+## Groove and Swing
+
+Real rhythm has human feel — some beats pushed forward, others laid back.
+In Aither, you warp time itself:
+
+```javascript
+play('swung-hats', s => {
+  const bps = 130 / 60;
+
+  // Raw phase
+  s.state[0] = (s.state[0] + (bps * 2) / s.sr) % 1.0;
+  const phase = s.state[0];
+
+  // Warp the phase: push odd beats late (swing feel)
+  // sin(phase * PI) creates a subtle S-curve
+  const swing = 0.1;
+  const warped = phase + Math.sin(phase * Math.PI) * swing;
+
+  const env = Math.exp(-warped * 80);
+  const noise = Math.random() * 2 - 1;
+  s.state[1] = s.state[1] * 0.8 + noise * 0.2;
+
+  return (noise - s.state[1]) * env * 0.3;
+})
+```
+
+You're not shifting note positions on a grid. You're **warping the
+envelope's sense of time**.
+
+---
+
+## Planned Rhythm Helpers
+
+> These helpers don't exist yet. They represent the vocabulary we're
+> building toward. For now, use `s.state` and math as shown above.
+
+```javascript
+// phasor(freq) — 0→1 ramp, the fundamental rhythm primitive
+const beat = phasor(s => 130/60);
+
+// gate(freq, duty) — 0/1 pulse derived from phasor
+const onOff = gate(s => 130/60, 0.1);
+
+// decay(signal, rate) — exponential decay triggered by rising edges
+const env = decay(beat, 40);
+
+// seq(phasor, [...values]) — step through array values by phase position
+const note = seq(beat, [60, 63, 67, 70]);
+
+// euclidean(hits, steps, phasor) — euclidean rhythm pattern
+const pattern = euclidean(3, 8, beat);
+```
+
+These are the building blocks of a rhythm language. Each is still a signal
+— `f(s) → sample` — composable with everything else.
+
+---
+
+## Summary
+
+1. **Start with a phasor**: `s.state[n] = (s.state[n] + freq/s.sr) % 1.0`
+2. **Derive everything from phase**: gates, envelopes, sequences are just
+   math on the 0→1 ramp
+3. **Clock division is frequency division**: halve the frequency for half
+   notes, double for eighth notes
+4. **Use Pattern 1** (oscillator helpers) for sustained sounds
+5. **Use Pattern 2** (inline with s.state) for percussive sounds where
+   everything is interdependent
+6. **Warp time for groove**: modulate the phase itself for swing and feel
+
+In Aither, you don't program a drum pattern. You program the physics of a
+drum being struck by a clock made of light.
