@@ -2,7 +2,7 @@
 
 import { performance, monitorEventLoopDelay } from 'perf_hooks';
 import { api, config, generateAudioChunk } from './engine.js';
-import { startStream } from './speaker.js';
+import { startStream } from './adapters/speaker.js';
 import { startReplServer } from './repl-server.js';
 import path from 'path';
 

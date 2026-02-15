@@ -4,7 +4,7 @@
 
 import Speaker from 'speaker';
 import { Readable } from 'stream';
-import { config } from './engine.js';
+import { config } from '../engine.js';
 
 class AudioStream extends Readable {
     constructor(processFn, options) {
