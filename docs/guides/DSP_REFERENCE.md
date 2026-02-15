@@ -206,6 +206,30 @@ regenerating echoes. Amount 0→1 (above 0.9 gets dangerous).
 pipe(sin(440), signal => feedback(signal, 2.0, 0.375, 0.6))
 ```
 
+### `reverb(signal, time, damping, mix)`
+Schroeder reverb — 4 parallel comb filters with damping fed into 2 series
+allpass filters for echo density. Sounds like a room.
+
+- `time` — RT60 decay time in seconds. How long the tail rings.
+- `damping` — high-frequency absorption, 0 (bright) to 1 (dark).
+- `mix` — dry/wet crossfade, 0 (all dry) to 1 (all wet).
+
+All parameters accept a number or function of `s`.
+
+```javascript
+// Small bright room
+pipe(sin(440), signal => reverb(signal, 0.8, 0.2, 0.3))
+
+// Large dark hall
+pipe(tri(220), signal => reverb(signal, 3.0, 0.7, 0.5))
+
+// Evolving space
+pipe(saw(110),
+  signal => lowpass(signal, 600),
+  signal => reverb(signal, 2.0, s => 0.3 + Math.sin(s.t * 0.1) * 0.2, 0.4)
+)
+```
+
 ---
 
 ## FM Synthesis

@@ -22,24 +22,24 @@ const STATE_SIZE = 65536;
 const MAX_SIGNALS = 512;
 export const SLOTS_PER_SIGNAL = Math.floor(STATE_SIZE / MAX_SIGNALS);
 
-globalThis.LEL_STATE ??= new Float64Array(STATE_SIZE);
-globalThis.LEL_REGISTRY ??= new Map();
-globalThis.LEL_OFFSETS ??= new Map();
-const STATE = globalThis.LEL_STATE;
-const REGISTRY = globalThis.LEL_REGISTRY;
-const OFFSETS = globalThis.LEL_OFFSETS;
+globalThis.AITHER_STATE ??= new Float64Array(STATE_SIZE);
+globalThis.AITHER_REGISTRY ??= new Map();
+globalThis.AITHER_OFFSETS ??= new Map();
+const STATE = globalThis.AITHER_STATE;
+const REGISTRY = globalThis.AITHER_REGISTRY;
+const OFFSETS = globalThis.AITHER_OFFSETS;
 
 // --- Helper Memory Pool ---
 const HELPER_MEMORY_SIZE = 1048576;
-if (!globalThis.LEL_HELPER_MEMORY || globalThis.LEL_HELPER_MEMORY.length !== HELPER_MEMORY_SIZE) {
-    globalThis.LEL_HELPER_MEMORY = new Float64Array(HELPER_MEMORY_SIZE);
-    globalThis.LEL_HELPER_SLOT_MAP = new Map();
-    globalThis.LEL_HELPER_NEXT_SLOT = 0;
+if (!globalThis.AITHER_HELPER_MEMORY || globalThis.AITHER_HELPER_MEMORY.length !== HELPER_MEMORY_SIZE) {
+    globalThis.AITHER_HELPER_MEMORY = new Float64Array(HELPER_MEMORY_SIZE);
+    globalThis.AITHER_HELPER_SLOT_MAP = new Map();
+    globalThis.AITHER_HELPER_NEXT_SLOT = 0;
 } else {
-    globalThis.LEL_HELPER_SLOT_MAP ??= new Map();
-    globalThis.LEL_HELPER_NEXT_SLOT ??= 0;
+    globalThis.AITHER_HELPER_SLOT_MAP ??= new Map();
+    globalThis.AITHER_HELPER_NEXT_SLOT ??= 0;
 }
-globalThis.LEL_HELPER_FREE_LIST ??= [];
+globalThis.AITHER_HELPER_FREE_LIST ??= [];
 
 // --- Engine State ---
 let position = { x: 0, y: 0, z: 0 };
@@ -58,7 +58,7 @@ const s = {
 
 // --- Garbage Collection ---
 function garbageCollectHelpers(signalName) {
-    const map = globalThis.LEL_HELPER_SLOT_MAP;
+    const map = globalThis.AITHER_HELPER_SLOT_MAP;
     if (!map) return;
 
     let collectedCount = 0;
@@ -66,14 +66,14 @@ function garbageCollectHelpers(signalName) {
 
     for (const [key, value] of Array.from(map.entries())) {
         if (key.startsWith(prefix)) {
-            globalThis.LEL_HELPER_FREE_LIST.push({ offset: value.offset, size: value.size });
+            globalThis.AITHER_HELPER_FREE_LIST.push({ offset: value.offset, size: value.size });
             map.delete(key);
             collectedCount++;
         }
     }
 
     if (collectedCount > 0) {
-        globalThis.LEL_HELPER_FREE_LIST.sort((a, b) => a.size - b.size);
+        globalThis.AITHER_HELPER_FREE_LIST.sort((a, b) => a.size - b.size);
         console.log(`[Aither] GC: Reclaimed ${collectedCount} helper state block(s) for "${signalName}" to the free list.`);
     }
 }
@@ -187,9 +187,10 @@ export const api = {
             REGISTRY.clear();
             OFFSETS.clear();
             STATE.fill(0);
-            if (globalThis.LEL_HELPER_SLOT_MAP) globalThis.LEL_HELPER_SLOT_MAP.clear();
-            globalThis.LEL_HELPER_NEXT_SLOT = 0;
-            globalThis.LEL_HELPER_FREE_LIST = [];
+            globalThis.AITHER_HELPER_MEMORY.fill(0);
+            if (globalThis.AITHER_HELPER_SLOT_MAP) globalThis.AITHER_HELPER_SLOT_MAP.clear();
+            globalThis.AITHER_HELPER_NEXT_SLOT = 0;
+            globalThis.AITHER_HELPER_FREE_LIST = [];
             console.log('[Aither] Cleared function registry.');
         } else {
             for (const name of REGISTRY.keys()) {

@@ -11,7 +11,7 @@
 import { claimStateBlock, nextHelperIndex } from './state.js';
 
 const TAU = 2 * Math.PI;
-const mem = globalThis.LEL_HELPER_MEMORY;
+const mem = globalThis.AITHER_HELPER_MEMORY;
 
 // --- Sine ---
 export const sin = (freq) => {

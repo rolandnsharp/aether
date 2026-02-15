@@ -79,7 +79,7 @@ play('fire-drone',
 play('mix-test',
   mix(
     s => Math.sin(2 * Math.PI * 220 * s.t) * 0.2,
-    s => Math.sin(2 * Math.PI * 330 * s.t) * 0.2,
+    s => Math.sin(2 * Math.PI * 330 * s.t) * 0.2, 
     s => Math.sin(2 * Math.PI * 440 * s.t) * 0.2
   )
 )
@@ -105,8 +105,14 @@ stop('osc-saw', 2)
 // Kick                                                    
 const beat = phasor(130/60);
 const envelope = share(decay(beat, 40));
-const kick = sin(s => 60 + envelope(s) * 200);     
-play('kick', s => kick(s) * envelope(s) * 0.8)
+const xx = sin(s => 60 + envelope(s) * 200);   
+play('reverb-kick', pipe(
+    s => xx(s) * envelope(s) * 0.8,
+    signal => reverb(signal, 2, 0.3, 0.5)
+  ))
+
+
+// play('kick', s => kick(s) * envelope(s) * 0.8)
 
 solo('kick', 3)
 
@@ -191,21 +197,18 @@ stop('haunt', 8)
 // --- Stereo shimmer: detuned pair panned wide ---
 const shimL = pipe(sin(879), signal => delay(signal, 0.32, 0.13));
 const shimR = pipe(sin(880), signal => delay(signal, 0.52, 0.17));
-play('shimmer', s => [shimL(s) * 0.1, shimR(s) * 0.1], 4)
- 
-stop('shimmer', 6) 
+const reverbR = reverb(shimR, 2, 0.1, 0.3)
+const reverbL = reverb(shimL, 2, 0.1, 0.3)
+play('shimmer', s => [reverbL(s) * 0.1, reverbR(s) * 0.1], 4)
 
 
 // --- Glitch rhythm: pulse wave with shifting duty cycle ---
-const glitchBeat = phasor(130/60);
-const glitchEnv = decay(glitchBeat, 50);
-const glitch = pulse(s => 110 + glitchEnv(s) * 440, s => 0.05 + Math.sin(s.t * 0.7) * 0.45);
-play('glitch', pipe(
-  s => glitch(s) * glitchEnv(s) * 0.15,
-  signal => highpass(signal, 200)
-))
+const x = pipe(saw(110), signal => lowpass(signal, 600), signal => reverb(signal, 3.0, 0.7, 0.5))  
+play('glitch', x)
 
 stop('glitch', 4)
+
+
 
 //  const voices = [-10, -6, -3, 0, 3, 6, 10].map(d => saw(s => 110 + d));                      
 //   play('supersaw', pipe(                                                                    
