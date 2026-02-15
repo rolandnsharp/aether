@@ -1,8 +1,10 @@
 // Aither Audio Engine (REPL-Driven)
 
+import { performance, monitorEventLoopDelay } from 'perf_hooks';
 import { startStream, config } from './speaker.js';
 import * as dsp from './dsp.js';
 import dgram from 'dgram';
+import path from 'path';
 
 // --- High-Performance Configuration ---
 const STATE_SIZE = 65536;
@@ -45,6 +47,23 @@ Object.assign(globalThis.LEL_HELPER_STATE_ACCESSOR = {}, {
 });
 
 let position = { x: 0, y: 0, z: 0 };
+
+// ============================================================================
+// ARCHITECTURAL FIX: High-Precision Timekeeping
+// ============================================================================
+//
+// To solve the problem of floating-point precision loss for the stateless
+// `f(s.t)` paradigm (Kanon), we implement a double-precision timekeeper.
+//
+// Instead of a single `s.t` variable that grows indefinitely and loses
+// precision, we track the whole seconds and the fractional part of seconds
+// separately. All incremental additions happen on the small fractional part,
+// which preserves precision forever. `s.t` is then reconstructed on every
+// sample, providing a perfectly stable time source to the user.
+//
+let time_sec = 0; // Stores the integer part of the time
+let time_frac = 0.0; // Stores the fractional part of the time (always 0.0-1.0)
+// ============================================================================
 
 // --- The 's' Object (The "Universe" context) ---
 const s = {
@@ -160,7 +179,29 @@ const outputBuffer = new Float32Array(config.BUFFER_SIZE * config.STRIDE);
 function generateAudioChunk() {
     for (let i = 0; i < config.BUFFER_SIZE; i++) {
         let left = 0, right = 0;
-        s.t += s.dt;
+
+        // ============================================================================
+        // ENGINE CORE: High-Precision Time Calculation
+        // ============================================================================
+        // This is the backend fix that makes the stateless `Kanon` paradigm stable.
+        // By accumulating time on the small `time_frac` variable, we avoid the
+        // floating-point precision errors that cause pops in long-running sessions.
+        
+        // 1. Increment the fractional part of the time.
+        time_frac += s.dt;
+
+        // 2. If the fractional part has exceeded 1.0, roll it over and increment
+        //    the main seconds counter.
+        if (time_frac >= 1.0) {
+            time_sec++;
+            time_frac -= 1.0;
+        }
+
+        // 3. Reconstruct the final `s.t` value for the user's signal function.
+        //    This value is now stable and precise indefinitely.
+        s.t = time_sec + time_frac;
+        // ============================================================================
+        
         s.idx = i;
 
         for (const [name, { fn, stateObject }] of REGISTRY.entries()) {
@@ -182,11 +223,23 @@ function generateAudioChunk() {
 }
 
 // --- Main Execution ---
+globalThis.AITHER_SESSION_FILE = null; // To store the path of the session file
+
 async function start() {
     if (globalThis.AITHER_ENGINE_INSTANCE) {
         // If engine is already running, just reload the session
-        console.log('[Aither] Hot-reload detected. Rerunning live-session.js.');
-        await import('../live-session.js?' + Date.now()); // Cache-bust
+        console.log('[Aither] Hot-reload detected. Rerunning session file.');
+        if (globalThis.AITHER_SESSION_FILE) {
+            try {
+                // Cache-bust to force re-import
+                await import(globalThis.AITHER_SESSION_FILE + '?' + Date.now());
+                console.log(`[Aither] Reloaded ${globalThis.AITHER_SESSION_FILE}`);
+            } catch (e) {
+                console.error(`[Aither] Error reloading session file '${globalThis.AITHER_SESSION_FILE}':`, e.message);
+            }
+        } else {
+            console.log('[Aither] No session file was loaded initially. Nothing to reload.');
+        }
         return;
     }
 
@@ -219,12 +272,40 @@ async function start() {
     });
     server.bind(REPL_PORT, REPL_HOST);
 
-    // Load startup script AFTER server is ready (with await to ensure API is available)
-    console.log('[Aither] Loading initial session from live-session.js...');
+    // --- Performance Monitoring (Optional) ---
+    if (process.env.AITHER_PERF_MONITOR === 'true') {
+        const histogram = monitorEventLoopDelay();
+        histogram.enable();
+        console.log('[Perf] Event loop monitoring is active. (export AITHER_PERF_MONITOR=true)');
+        setInterval(() => {
+            if (histogram.max > 0) {
+                console.log(`[Perf] Max event loop delay over last 5s: ${histogram.max / 1_000_000} ms`);
+                histogram.reset();
+            }
+        }, 5000);
+    }
+
+    // Load startup script AFTER server is ready
+    const sessionFileArg = process.argv[2];
+    const defaultSessionFile = 'live-session.js';
+    
+    let fileToLoadPath = sessionFileArg 
+        ? path.resolve(process.cwd(), sessionFileArg) 
+        : path.resolve(process.cwd(), defaultSessionFile);
+
+    globalThis.AITHER_SESSION_FILE = fileToLoadPath; // Store for hot-reloads
+
+    console.log(`[Aither] Loading initial session from ${fileToLoadPath}...`);
     try {
-        await import('../live-session.js');
+        await import(fileToLoadPath);
     } catch (e) {
-        console.error('[Aither] Error loading session file:', e.message);
+        if (e.code === 'ERR_MODULE_NOT_FOUND' && !sessionFileArg) {
+            console.log('[Aither] Default live-session.js not found. Starting with an empty session.');
+            globalThis.AITHER_SESSION_FILE = null; // Nothing to reload
+        } else {
+            console.error(`[Aither] Error loading session file '${fileToLoadPath}':`, e.message);
+            globalThis.AITHER_SESSION_FILE = null; // Nothing to reload
+        }
     }
 }
 

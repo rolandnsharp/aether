@@ -131,29 +131,29 @@ const spatialMovement = s => {
 // ═══════════════════════════════════════════════════════════════════════════
 // Uses s.state for phase accumulation, s.sr for sample rate
 
-play('earth-pulse',
-  s => {
-    // Pulsing chord progression
-    const chordIndex = Math.floor(s.t / 8) % 2;
-    const chords = [
-      [110, 138.6, 165],    // A2, C#3, E3
-      [98, 130.8, 164.8]    // G2, C3, E3
-    ];
-    const freqs = chords[chordIndex];
+// play('earth-pulse',
+//   s => {
+//     // Pulsing chord progression
+//     const chordIndex = Math.floor(s.t / 8) % 2;
+//     const chords = [
+//       [110, 138.6, 165],    // A2, C#3, E3
+//       [98, 130.8, 164.8]    // G2, C3, E3
+//     ];
+//     const freqs = chords[chordIndex];
 
-    let output = 0;
-    for (let i = 0; i < freqs.length; i++) {
-      s.state[i] = (s.state[i] || 0) + freqs[i] / s.sr;
-      s.state[i] %= 1.0;
-      output += Math.sin(s.state[i] * 2 * Math.PI);
-    }
+//     let output = 0;
+//     for (let i = 0; i < freqs.length; i++) {
+//       s.state[i] = (s.state[i] || 0) + freqs[i] / s.sr;
+//       s.state[i] %= 1.0;
+//       output += Math.sin(s.state[i] * 2 * Math.PI);
+//     }
 
-    // Get the rhythmic pulse by calling the control signal
-    const pulse = earthEnergy(s);
+//     // Get the rhythmic pulse by calling the control signal
+//     const pulse = earthEnergy(s);
 
-    return output / freqs.length * pulse * 0.92;
-  }
-);
+//     return output / freqs.length * pulse * 0.92;
+//   }
+// );
 
 play('earth-lead',
   pipe(

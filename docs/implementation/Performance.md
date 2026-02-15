@@ -422,6 +422,51 @@ Based on the architecture review:
 
 ---
 
+## Ultimate Performance Model: Flattened State
+
+A final, more radical optimization would involve changing the `s` object itself to eliminate all object overhead, preparing the engine for WebAssembly or extreme performance scenarios.
+
+**Current Model**:
+The `s` object is ergonomic, but `s.position` is a sub-object. Accessing `s.position.x` requires a pointer lookup. While the current implementation is safe (it mutates the object, creating no garbage), this indirection has a tiny, theoretical CPU cost.
+
+**Flattened Model**:
+The entire universe state (`t`, `sr`, `position`) and the per-signal state would be represented by raw `Float64Array`s.
+
+```javascript
+// Define the memory layout for the GLOBAL state
+const S_T = 0;
+const S_SR = 1;
+const S_DT = 2;
+const S_POS_X = 3;
+const S_POS_Y = 4;
+const S_POS_Z = 5;
+
+// The signal function's signature would change
+play('spatial-drone', (s_array, state_array) => {
+  // s_array is the global universe state
+  const x = s_array[S_POS_X];
+  const t = s_array[S_T];
+  
+  // state_array is the signal's private, persistent memory
+  state_array[0] = (state_array[0] + 440 / s_array[S_SR]) % 1.0;
+
+  return Math.sin(t * x * 100) * state_array[0];
+});
+```
+
+**Pros**:
+- **Zero GC pressure**: Guaranteed no object allocation.
+- **Maximum CPU cache efficiency**: All state is in a contiguous block of memory.
+- **WebAssembly/C++ Friendly**: A raw memory buffer is trivial to pass to other languages.
+
+**Cons**:
+- **Worse Ergonomics**: `s_array[S_POS_X]` is much less readable than `s.position.x`.
+- **Requires Discipline**: The programmer must manage indices carefully.
+
+This model represents the peak of performance but is a significant trade-off in developer experience. It should only be considered if all other optimizations are insufficient.
+
+---
+
 ## Conclusion
 
 Wave's current implementation is **good for live coding** but has room for optimization if you need professional-grade performance. The architecture is clean and the incremental optimization path is clear.
