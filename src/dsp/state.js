@@ -14,7 +14,11 @@ export function resetHelperCounterInternal() {
     helperCounter = 0;
 }
 
-function claimStateBlock(s, helperName, helperIndex, totalBlockSize) {
+export function nextHelperIndex() {
+    return helperCounter++;
+}
+
+export function claimStateBlock(s, helperName, helperIndex, totalBlockSize) {
     const helperKey = `${s.name}_${helperName}_${helperIndex}`;
 
     if (globalThis.LEL_HELPER_SLOT_MAP.has(helperKey)) {

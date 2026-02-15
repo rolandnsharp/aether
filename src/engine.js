@@ -124,7 +124,9 @@ export const api = {
         const wrappedFn = (s) => {
             fadeElapsed += s.dt;
             const gain = fadeElapsed >= fadeTime ? 1 : fadeElapsed / fadeTime;
-            return fn(s) * gain;
+            const result = fn(s);
+            if (Array.isArray(result)) { for (let i = 0; i < result.length; i++) result[i] *= gain; return result; }
+            return result * gain;
         };
         api.register(name, wrappedFn);
     },

@@ -1,4 +1,4 @@
-// Aither DSP — Stateless signal helpers (stride-agnostic).
+// Aither DSP — Stateless signal helpers.
 
 export const gain = (signal, amount) => {
     const gainFn = typeof amount === 'function' ? amount : () => amount;
@@ -6,7 +6,8 @@ export const gain = (signal, amount) => {
         const value = signal(s);
         const g = gainFn(s);
         if (Array.isArray(value)) {
-            return value.map(sample => sample * g);
+            for (let i = 0; i < value.length; i++) value[i] *= g;
+            return value;
         }
         return value * g;
     };
@@ -15,11 +16,7 @@ export const gain = (signal, amount) => {
 export const pan = (signal, position) => {
     const posFn = typeof position === 'function' ? position : () => position;
     return s => {
-        let value = signal(s);
-        if (Array.isArray(value)) {
-            console.warn("The 'pan' helper expects a mono signal but received an array. Using the first channel.");
-            value = value[0];
-        }
+        const value = signal(s);
         const pos = Math.max(-1, Math.min(1, posFn(s)));
         const angle = (pos * Math.PI) / 4;
         return [
