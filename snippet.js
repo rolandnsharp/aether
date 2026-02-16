@@ -105,11 +105,11 @@ stop('osc-saw', 2)
 // Kick                                                    
 const beat = phasor(130/60);
 const envelope = share(decay(beat, 40));
-const xx = sin(s => 60 + envelope(s) * 200);   
+const kick = sin(s => 60 + envelope(s) * 200);   
 play('reverb-kick', pipe(
-    s => xx(s) * envelope(s) * 0.8,
-    signal => reverb(signal, 2, 0.3, 0.5)
-  ))
+  s => kick(s) * envelope(s) * 0.8,
+  signal => reverb(signal, 2, 0.3, 0.5)
+))
 
 
 // play('kick', s => kick(s) * envelope(s) * 0.8)
