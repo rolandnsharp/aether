@@ -6,6 +6,9 @@
 <title>Aither</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+    overflow: hidden;
+}
 body {
     background: #0a0a0a;
     color: #d4d4d4;
@@ -61,6 +64,7 @@ main {
     display: flex;
     flex-direction: column;
     min-width: 0;
+    min-height: 0;
 }
 #editor-pane { border-right: 1px solid #262626; }
 #right-col {
@@ -187,9 +191,11 @@ main {
     flex: 1;
     padding: 12px;
     overflow-y: auto;
+    scrollbar-width: none;
     font-size: 13px;
     line-height: 1.5;
 }
+#output::-webkit-scrollbar { display: none; }
 #output div { padding: 1px 0; }
 #output .cmd { color: #7c8aff; }
 #output .info { color: #888; }
