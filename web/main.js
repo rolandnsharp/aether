@@ -1,5 +1,7 @@
 // Aither Browser — AudioContext setup, code transport, UI logic.
 
+import { initScope } from './oscilloscope/scope.js';
+
 let audioCtx = null;
 let workletNode = null;
 
@@ -124,6 +126,20 @@ async function ensureAudio() {
         outputChannelCount: [2],
     });
     workletNode.connect(audioCtx.destination);
+
+    // Analyser nodes for oscilloscope
+    const splitter = audioCtx.createChannelSplitter(2);
+    const analyserL = audioCtx.createAnalyser();
+    const analyserR = audioCtx.createAnalyser();
+    analyserL.fftSize = 2048;
+    analyserR.fftSize = 2048;
+    analyserL.smoothingTimeConstant = 0;
+    analyserR.smoothingTimeConstant = 0;
+    workletNode.connect(splitter);
+    splitter.connect(analyserL, 0);
+    splitter.connect(analyserR, 1);
+
+    initScope(analyserL, analyserR, document.getElementById('scope-canvas-wrap'));
 
     workletNode.port.onmessage = (e) => {
         const d = e.data;
