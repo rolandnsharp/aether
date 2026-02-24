@@ -1,6 +1,6 @@
 // Aither Web — minimal static file server.
 
-import { readdir } from 'node:fs/promises';
+import { readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 const MIME = {
@@ -13,6 +13,11 @@ const MIME = {
 
 const port = parseInt(process.env.PORT) || 3000;
 const snippetsDir = join(import.meta.dir, 'snippets');
+
+// Sync index.json with snippets directory on startup
+const files = await readdir(snippetsDir);
+const names = files.filter(f => f.endsWith('.js')).map(f => f.slice(0, -3)).sort();
+await writeFile(join(snippetsDir, 'index.json'), JSON.stringify(names));
 
 Bun.serve({
     port,
